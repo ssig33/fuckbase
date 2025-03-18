@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  fuckbase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - FUCKBASE_PORT=8080
+      - FUCKBASE_HOST=0.0.0.0
+      - FUCKBASE_DATA_DIR=/app/data
+      - FUCKBASE_LOG_LEVEL=info
+    command: --port 8080 --host 0.0.0.0 --data-dir /app/data
+    restart: unless-stopped
+
+  # Test client for E2E testing
+  test-client:
+    image: curlimages/curl:latest
+    depends_on:
+      - fuckbase
+    volumes:
+      - ./e2e-tests:/tests:ro
+    # Keep the container running so we can exec into it
+    command: ["sh", "-c", "while true; do sleep 10; done"]
