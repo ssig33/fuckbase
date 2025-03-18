@@ -5,7 +5,6 @@ require 'bundler/inline'
 gemfile do
   source 'https://rubygems.org'
   gem 'minitest'
-  gem 'msgpack'
   gem 'base64'  # Add base64 gem for Ruby 3.4+ compatibility
 end
 
