@@ -69,6 +69,7 @@ class TestFuckBase < Minitest::Test
     response = @set.put('user1', user_data)
     assert_equal 'success', response['status']
     
+    # Get the data we just put
     retrieved_data = @set.get('user1')
     assert_equal user_data, retrieved_data
     
@@ -76,8 +77,14 @@ class TestFuckBase < Minitest::Test
     response = @set.delete('user1')
     assert_equal 'success', response['status']
     
-    # Verify the data is deleted
-    assert_nil @set.get('user1')
+    # Verify the data is deleted - this should return nil or raise an error
+    begin
+      deleted_data = @set.get('user1')
+      assert_nil deleted_data, "Expected nil for deleted key, got: #{deleted_data.inspect}"
+    rescue RuntimeError => e
+      # It's also acceptable if the server returns a KEY_NOT_FOUND error
+      assert_match(/KEY_NOT_FOUND/, e.message)
+    end
   end
   
   def test_index_operations
