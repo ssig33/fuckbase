@@ -356,11 +356,7 @@ POST /server/info
   "status": "success",
   "version": "1.0.0",
   "uptime": "10d 2h 30m",
-  "databases_count": 5,
-  "memory_usage": {
-    "total_mb": 256,
-    "used_mb": 128
-  }
+  "databases_count": 5
 }
 ```
 
