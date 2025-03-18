@@ -111,4 +111,25 @@ curl -s -X POST $BASE_URL/drop -d '{
 }' | grep -q '"status":"success"'
 check_success "Drop database"
 
-echo "\n🎉 All tests passed successfully!"
+echo "\n🎉 All basic tests passed successfully!"
+
+# Run S3 backup tests if S3 is enabled
+# Check if S3 is enabled by trying to list backups
+S3_ENABLED=$(curl -s -X POST $BASE_URL/backup/list -d '{}' | grep -c '"status":"success"')
+
+if [ "$S3_ENABLED" -eq 1 ]; then
+  echo "\n🔍 S3 is enabled, running S3 backup tests..."
+  
+  # Run the S3 backup tests
+  sh /tests/s3-backup-tests.sh
+  S3_TEST_RESULT=$?
+  
+  if [ $S3_TEST_RESULT -ne 0 ]; then
+    echo "❌ S3 backup tests failed!"
+    exit $S3_TEST_RESULT
+  fi
+else
+  echo "\n⚠️ S3 is not enabled, skipping S3 backup tests"
+fi
+
+echo "\n🎉 All tests completed successfully!"

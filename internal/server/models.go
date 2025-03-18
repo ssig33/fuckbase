@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // Response is the base response structure
@@ -149,4 +150,45 @@ type ServerInfoResponse struct {
 		TotalMB int `json:"total_mb"`
 		UsedMB  int `json:"used_mb"`
 	} `json:"memory_usage"`
+}
+
+// CreateBackupRequest is the request structure for creating a backup
+type CreateBackupRequest struct {
+	Database  string `json:"database,omitempty"` // If empty, backup all databases
+	AdminAuth struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"admin_auth"`
+}
+
+// ListBackupsRequest is the request structure for listing backups
+type ListBackupsRequest struct {
+	Database  string `json:"database,omitempty"` // If empty, list all backups
+	AdminAuth struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"admin_auth"`
+}
+
+// BackupInfo represents information about a backup
+type BackupInfo struct {
+	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
+	Size      int64     `json:"size"`
+	Database  string    `json:"database,omitempty"`
+}
+
+// ListBackupsResponse is the response structure for listing backups
+type ListBackupsResponse struct {
+	Status  string       `json:"status"`
+	Backups []BackupInfo `json:"backups"`
+}
+
+// RestoreBackupRequest is the request structure for restoring a backup
+type RestoreBackupRequest struct {
+	BackupName string `json:"backup_name"`
+	AdminAuth  struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"admin_auth"`
 }

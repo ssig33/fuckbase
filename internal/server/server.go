@@ -10,6 +10,7 @@ import (
 	"github.com/ssig33/fuckbase/internal/config"
 	"github.com/ssig33/fuckbase/internal/database"
 	"github.com/ssig33/fuckbase/internal/logger"
+	"github.com/ssig33/fuckbase/internal/s3"
 )
 
 // Server represents the HTTP server for FuckBase
@@ -18,15 +19,34 @@ type Server struct {
 	DBManager      *database.Manager
 	httpServer     *http.Server
 	adminAuth      *AdminAuth
+	s3Client       *s3.Client
+	backupManager  *s3.BackupManager
+	backupTicker   *time.Ticker
+	stopBackupChan chan struct{}
 }
 
 // NewServer creates a new server with the given configuration and database manager
 func NewServer(cfg *config.ServerConfig, dbManager *database.Manager) *Server {
-	return &Server{
-		Config:    cfg,
-		DBManager: dbManager,
-		adminAuth: NewAdminAuth(cfg.AdminAuth),
+	server := &Server{
+		Config:         cfg,
+		DBManager:      dbManager,
+		adminAuth:      NewAdminAuth(cfg.AdminAuth),
+		stopBackupChan: make(chan struct{}),
 	}
+
+	// Initialize S3 client if enabled
+	if cfg.S3Config != nil && cfg.S3Config.Enabled {
+		var err error
+		server.s3Client, err = s3.NewClient(cfg.S3Config)
+		if err != nil {
+			logger.Error("Failed to initialize S3 client: %v", err)
+		} else {
+			logger.Info("S3 client initialized successfully")
+			server.backupManager = s3.NewBackupManager(server.s3Client, dbManager)
+		}
+	}
+
+	return server
 }
 
 // Start starts the HTTP server
@@ -44,6 +64,11 @@ func (s *Server) Start() error {
 		Handler: router,
 	}
 
+	// Start automatic backups if S3 is enabled
+	if s.backupManager != nil && s.Config.BackupInterval > 0 {
+		s.startAutomaticBackups()
+	}
+
 	// Start the server
 	logger.Info("Starting server on %s", addr)
 	return s.httpServer.ListenAndServe()
@@ -52,7 +77,36 @@ func (s *Server) Start() error {
 // Stop stops the HTTP server
 func (s *Server) Stop(ctx context.Context) error {
 	logger.Info("Stopping server")
+	
+	// Stop automatic backups
+	if s.backupTicker != nil {
+		s.stopBackupChan <- struct{}{}
+		s.backupTicker.Stop()
+	}
+	
 	return s.httpServer.Shutdown(ctx)
+}
+
+// startAutomaticBackups starts a ticker to perform automatic backups
+func (s *Server) startAutomaticBackups() {
+	interval := time.Duration(s.Config.BackupInterval) * time.Minute
+	s.backupTicker = time.NewTicker(interval)
+	
+	go func() {
+		logger.Info("Starting automatic backups every %d minutes", s.Config.BackupInterval)
+		for {
+			select {
+			case <-s.backupTicker.C:
+				logger.Info("Running scheduled backup")
+				if err := s.backupManager.BackupAllDatabases(); err != nil {
+					logger.Error("Scheduled backup failed: %v", err)
+				}
+			case <-s.stopBackupChan:
+				logger.Info("Stopping automatic backups")
+				return
+			}
+		}
+	}()
 }
 
 // registerEndpoints registers all API endpoints
@@ -75,6 +129,13 @@ func (s *Server) registerEndpoints(router *http.ServeMux) {
 
 	// Server info
 	router.HandleFunc("/server/info", s.handleServerInfo)
+	
+	// Backup and restore operations (only if S3 is enabled)
+	if s.backupManager != nil {
+		router.HandleFunc("/backup/create", s.handleBackupCreate)
+		router.HandleFunc("/backup/list", s.handleBackupList)
+		router.HandleFunc("/backup/restore", s.handleBackupRestore)
+	}
 }
 
 // logRequest logs information about an HTTP request
