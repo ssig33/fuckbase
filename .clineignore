@@ -1,0 +1,47 @@
+# Binary files
+/fuckbase
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Data and backup directories
+/data/
+/data/minio/
+
+# Build artifacts
+/bin/
+/dist/
+/build/
+
+# Dependency directories
+/vendor/
+/node_modules/
+
+# Generated files
+*.pb.go
+*_gen.go
+
+# Logs and temporary files
+/logs/
+/tmp/
+*.log
+
+# Large files and archives
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.pdf
+
+# OS specific
+.DS_Store
+.Trashes
+Thumbs.db
+
+# Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
