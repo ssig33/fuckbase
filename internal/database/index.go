@@ -50,6 +50,7 @@ func (idx *Index) Build(set *Set) error {
 }
 
 // extractFieldValue extracts the value of the indexed field from MessagePack encoded data
+// If the field is not found, it returns a special value "__MISSING__" instead of an error
 func (idx *Index) extractFieldValue(data []byte) (string, error) {
 	var m map[string]interface{}
 	if err := msgpack.Unmarshal(data, &m); err != nil {
@@ -59,7 +60,8 @@ func (idx *Index) extractFieldValue(data []byte) (string, error) {
 	// Get the field value
 	value, ok := m[idx.Field]
 	if !ok {
-		return "", fmt.Errorf("field not found in data: %s", idx.Field)
+		// Return a special value for missing fields instead of an error
+		return "__MISSING__", nil
 	}
 
 	// Convert the value to a string
