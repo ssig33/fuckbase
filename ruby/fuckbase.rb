@@ -166,19 +166,15 @@ class FuckBase
     # @param index [String] The name of the index
     # @param value [String] The value to query
     # @param sort [String] The sort order ('asc' or 'desc')
-    # @param limit [Integer] The maximum number of results to return
-    # @param offset [Integer] The offset to start from
     # @param auth [Hash] Authentication for the database (optional)
     # @return [Hash] The response from the server
-    def query_index(database, set, index, value, sort: 'asc', limit: 100, offset: 0, auth: nil)
-      payload = { 
-        database: database, 
-        set: set, 
-        index: index, 
-        value: value, 
-        sort: sort, 
-        limit: limit, 
-        offset: offset 
+    def query_index(database, set, index, value, sort: 'asc', auth: nil)
+      payload = {
+        database: database,
+        set: set,
+        index: index,
+        value: value,
+        sort: sort
       }
       payload[:auth] = auth if auth
 
@@ -330,11 +326,9 @@ class FuckBase
     # @param index_name [String] The name of the index
     # @param value [String] The value to query
     # @param sort [String] The sort order ('asc' or 'desc')
-    # @param limit [Integer] The maximum number of results to return
-    # @param offset [Integer] The offset to start from
     # @return [Hash] The query results
-    def query_index(set_name, index_name, value, sort: 'asc', limit: 100, offset: 0)
-      @client.query_index(@name, set_name, index_name, value, sort: sort, limit: limit, offset: offset, auth: @auth)
+    def query_index(set_name, index_name, value, sort: 'asc')
+      @client.query_index(@name, set_name, index_name, value, sort: sort, auth: @auth)
     end
 
     # Create a backup of the database
@@ -411,11 +405,9 @@ class FuckBase
     # @param index_name [String] The name of the index
     # @param value [String] The value to query
     # @param sort [String] The sort order ('asc' or 'desc')
-    # @param limit [Integer] The maximum number of results to return
-    # @param offset [Integer] The offset to start from
     # @return [Hash] The query results
-    def query_index(index_name, value, sort: 'asc', limit: 100, offset: 0)
-      @database.query_index(@name, index_name, value, sort: sort, limit: limit, offset: offset)
+    def query_index(index_name, value, sort: 'asc')
+      @database.query_index(@name, index_name, value, sort: sort)
     end
   end
 end

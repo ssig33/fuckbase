@@ -230,9 +230,7 @@ POST /index/query
   "database": "my_database",
   "set": "users",
   "index": "email_index",
-  "value": "john@example.com",
-  "limit": 10,
-  "offset": 0
+  "value": "john@example.com"
 }
 ```
 

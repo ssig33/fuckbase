@@ -154,7 +154,7 @@ func (idx *Index) UpdateEntry(key string, oldValue, newValue []byte) error {
 }
 
 // Query queries the index for keys matching the given value
-func (idx *Index) Query(value string, limit, offset int) ([]string, error) {
+func (idx *Index) Query(value string) ([]string, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
@@ -168,17 +168,7 @@ func (idx *Index) Query(value string, limit, offset int) ([]string, error) {
 	result := make([]string, len(keys))
 	copy(result, keys)
 
-	// Apply pagination
-	if offset >= len(result) {
-		return []string{}, nil
-	}
-
-	end := offset + limit
-	if end > len(result) || limit <= 0 {
-		end = len(result)
-	}
-
-	return result[offset:end], nil
+	return result, nil
 }
 
 // GetAllValues returns all unique values in the index

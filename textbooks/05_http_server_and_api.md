@@ -248,9 +248,7 @@ Setのフィールドにインデックスを作成するエンドポイント�
   "set": "users",
   "index": "email_index",
   "value": "john@example.com",
-  "sort": "asc",
-  "limit": 10,
-  "offset": 0
+  "sort": "asc"
 }
 ```
 

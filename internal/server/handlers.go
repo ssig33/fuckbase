@@ -852,10 +852,7 @@ func (s *Server) handleIndexQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set default values if not provided
-	if req.Limit <= 0 {
-		req.Limit = 100 // Default limit
-	}
+	// No default values needed anymore
 
 	// Get database
 	db, err := s.DBManager.GetDatabase(req.Database)
@@ -890,7 +887,7 @@ func (s *Server) handleIndexQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Query the index
-	keys, err := index.Query(req.Value, req.Limit, req.Offset)
+	keys, err := index.Query(req.Value)
 	if err != nil {
 		logger.Error("Failed to query index: %v", err)
 		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to query index")
