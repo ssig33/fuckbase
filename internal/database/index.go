@@ -115,7 +115,7 @@ func (idx *Index) RemoveEntry(key string, value []byte) error {
 	if err != nil {
 		// If the field is not found, silently skip this operation
 		if err.Error() == fmt.Sprintf("field not found in data: %s", idx.Field) {
-			return err // Return the error so UpdateEntry can handle it
+			return nil // Silently skip as per the comment
 		}
 		return err
 	}
@@ -147,10 +147,7 @@ func (idx *Index) RemoveEntry(key string, value []byte) error {
 func (idx *Index) UpdateEntry(key string, oldValue, newValue []byte) error {
 	// Remove the old entry
 	if err := idx.RemoveEntry(key, oldValue); err != nil {
-		// If the field is not found in the old value, silently continue
-		if err.Error() != fmt.Sprintf("field not found in data: %s", idx.Field) {
-			return err
-		}
+		return err
 	}
 
 	// Add the new entry
