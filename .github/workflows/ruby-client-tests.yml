@@ -26,12 +26,12 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2"
+          ruby-version: "3.4.2"
           bundler-cache: false
 
       - name: Install dependencies
         run: |
-          gem install msgpack
+          gem install msgpack base64 minitest
 
       - name: Start FuckBase server
         run: |
