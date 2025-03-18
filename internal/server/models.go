@@ -123,7 +123,6 @@ type QueryIndexRequest struct {
 	Set      string `json:"set"`
 	Index    string `json:"index"`
 	Value    string `json:"value"`
-	Sort     string `json:"sort"`
 	Limit    int    `json:"limit"`
 	Offset   int    `json:"offset"`
 	Auth     struct {

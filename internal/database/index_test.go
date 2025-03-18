@@ -34,7 +34,7 @@ func TestIndexWithMissingField(t *testing.T) {
 	}
 
 	// Verify the index has the expected entries
-	keys, err := index.Query("Alice", "", 0, 0)
+	keys, err := index.Query("Alice", 0, 0)
 	if err != nil {
 		t.Fatalf("Failed to query index: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestIndexWithMissingField(t *testing.T) {
 	// We'll check all values in the index to make sure key3 is not there
 	allValues := index.GetAllValues()
 	for _, value := range allValues {
-		keys, err = index.Query(value, "", 0, 0)
+		keys, err = index.Query(value, 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to query index: %v", err)
 		}
@@ -92,7 +92,7 @@ func TestIndexWithMissingField(t *testing.T) {
 	}
 
 	// Also verify that we can still query for the other values
-	keys, err = index.Query("Alice", "", 0, 0)
+	keys, err = index.Query("Alice", 0, 0)
 	if err != nil {
 		t.Fatalf("Failed to query index: %v", err)
 	}

@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/vmihailenco/msgpack/v5"
@@ -155,7 +154,7 @@ func (idx *Index) UpdateEntry(key string, oldValue, newValue []byte) error {
 }
 
 // Query queries the index for keys matching the given value
-func (idx *Index) Query(value string, sortOrder string, limit, offset int) ([]string, error) {
+func (idx *Index) Query(value string, limit, offset int) ([]string, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
@@ -168,13 +167,6 @@ func (idx *Index) Query(value string, sortOrder string, limit, offset int) ([]st
 	// Make a copy of the keys to avoid modifying the original
 	result := make([]string, len(keys))
 	copy(result, keys)
-
-	// Sort the keys if requested
-	if sortOrder == "asc" {
-		sort.Strings(result)
-	} else if sortOrder == "desc" {
-		sort.Sort(sort.Reverse(sort.StringSlice(result)))
-	}
 
 	// Apply pagination
 	if offset >= len(result) {

@@ -50,7 +50,7 @@ func TestIndexQueryWithMissingField(t *testing.T) {
 		
 		// すべての値に対してクエリを実行し、user3とuser4が含まれていないことを確認
 		for _, value := range allValues {
-			keys, err := index.Query(value, "", 0, 0)
+			keys, err := index.Query(value, 0, 0)
 			if err != nil {
 				t.Fatalf("Failed to query index: %v", err)
 			}
@@ -67,7 +67,7 @@ func TestIndexQueryWithMissingField(t *testing.T) {
 	// 期待結果: そのフィールド値を持つデータのキーが返される
 	t.Run("Query for existing field value", func(t *testing.T) {
 		// "Alice"で検索
-		keys, err := index.Query("Alice", "", 0, 0)
+		keys, err := index.Query("Alice", 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to query index: %v", err)
 		}
@@ -83,7 +83,7 @@ func TestIndexQueryWithMissingField(t *testing.T) {
 		}
 
 		// "Bob"で検索
-		keys, err = index.Query("Bob", "", 0, 0)
+		keys, err = index.Query("Bob", 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to query index: %v", err)
 		}
@@ -102,7 +102,7 @@ func TestIndexQueryWithMissingField(t *testing.T) {
 	// テスト3: 存在しないフィールド値でインデックス検索
 	// 期待結果: 空の結果が返される
 	t.Run("Query for non-existent field value", func(t *testing.T) {
-		keys, err := index.Query("NonExistent", "", 0, 0)
+		keys, err := index.Query("NonExistent", 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to query index: %v", err)
 		}

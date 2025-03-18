@@ -78,7 +78,7 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 	// We'll check all values in the index to make sure key3 and key4 are not there
 	allValues := index.GetAllValues()
 	for _, value := range allValues {
-		keys, err := index.Query(value, "", 0, 0)
+		keys, err := index.Query(value, 0, 0)
 		if err != nil {
 			t.Fatalf("Failed to query index: %v", err)
 		}
@@ -90,7 +90,7 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 	}
 
 	// Verify that we can still query for the other values
-	keys, err := index.Query("Alice", "", 0, 0)
+	keys, err := index.Query("Alice", 0, 0)
 	if err != nil {
 		t.Fatalf("Failed to query index: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 		t.Errorf("Expected index to have one entry for 'Alice', got %v", keys)
 	}
 
-	keys, err = index.Query("Bob", "", 0, 0)
+	keys, err = index.Query("Bob", 0, 0)
 	if err != nil {
 		t.Fatalf("Failed to query index: %v", err)
 	}
