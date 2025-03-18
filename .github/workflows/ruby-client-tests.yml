@@ -35,7 +35,7 @@ jobs:
 
       - name: Start FuckBase server
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 5 # Wait for server to start
 
       - name: Run tests
