@@ -146,10 +146,6 @@ type ServerInfoResponse struct {
 	Version        string `json:"version"`
 	Uptime         string `json:"uptime"`
 	DatabasesCount int    `json:"databases_count"`
-	MemoryUsage    struct {
-		TotalMB int `json:"total_mb"`
-		UsedMB  int `json:"used_mb"`
-	} `json:"memory_usage"`
 }
 
 // CreateBackupRequest is the request structure for creating a backup

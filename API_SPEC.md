@@ -283,18 +283,13 @@ POST /index/drop
 #### バックアップ実行
 
 ```
-POST /backup
+POST /backup/create
 ```
 
 **リクエスト**:
 ```json
 {
-  "database": "my_database",
-  "destination": "s3://my-bucket/backups/",
-  "credentials": {
-    "access_key": "ACCESS_KEY",
-    "secret_key": "SECRET_KEY"
-  }
+  "database": "my_database"
 }
 ```
 
@@ -302,8 +297,37 @@ POST /backup
 ```json
 {
   "status": "success",
-  "message": "Backup completed successfully",
-  "backup_id": "backup_20250318_123456"
+  "message": "Database backed up successfully"
+}
+```
+
+**注意**: サーバーに管理ユーザーが設定されている場合、このエンドポイントには管理者認証が必要です。
+
+#### バックアップ一覧取得
+
+```
+POST /backup/list
+```
+
+**リクエスト**:
+```json
+{
+  "database": "my_database"
+}
+```
+
+**レスポンス**:
+```json
+{
+  "status": "success",
+  "backups": [
+    {
+      "name": "backups/my_database/20250318-123456.json",
+      "timestamp": "2025-03-18T12:34:56Z",
+      "size": 1024,
+      "database": "my_database"
+    }
+  ]
 }
 ```
 
@@ -312,18 +336,13 @@ POST /backup
 #### バックアップからの復元
 
 ```
-POST /restore
+POST /backup/restore
 ```
 
 **リクエスト**:
 ```json
 {
-  "database": "my_database",
-  "source": "s3://my-bucket/backups/backup_20250318_123456",
-  "credentials": {
-    "access_key": "ACCESS_KEY",
-    "secret_key": "SECRET_KEY"
-  }
+  "backup_name": "backups/my_database/20250318-123456.json"
 }
 ```
 
@@ -354,7 +373,7 @@ POST /server/info
 ```json
 {
   "status": "success",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "uptime": "10d 2h 30m",
   "databases_count": 5
 }

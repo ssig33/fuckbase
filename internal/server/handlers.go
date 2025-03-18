@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"runtime"
 	"time"
 
 	"github.com/ssig33/fuckbase/internal/database"
@@ -266,23 +266,19 @@ func (s *Server) handleServerInfo(w http.ResponseWriter, r *http.Request) {
 
 // handleServerInfoImpl implements the server info logic
 func (s *Server) handleServerInfoImpl(w http.ResponseWriter, r *http.Request) {
-	// Get memory stats
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
+	// Calculate uptime
+	uptime := time.Since(s.startTime)
+	days := int(uptime.Hours()) / 24
+	hours := int(uptime.Hours()) % 24
+	minutes := int(uptime.Minutes()) % 60
+	uptimeStr := fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
 
 	// Create response
 	response := ServerInfoResponse{
 		Status:         "success",
-		Version:        "1.0.0", // TODO: Get from build info
-		Uptime:         "0d 0h 0m", // TODO: Calculate uptime
+		Version:        "0.0.1",
+		Uptime:         uptimeStr,
 		DatabasesCount: s.DBManager.GetDatabaseCount(),
-		MemoryUsage: struct {
-			TotalMB int `json:"total_mb"`
-			UsedMB  int `json:"used_mb"`
-		}{
-			TotalMB: int(memStats.Sys / 1024 / 1024),
-			UsedMB:  int(memStats.Alloc / 1024 / 1024),
-		},
 	}
 
 	logger.Info("Server info requested")

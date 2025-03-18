@@ -23,6 +23,7 @@ type Server struct {
 	backupManager  *s3.BackupManager
 	backupTicker   *time.Ticker
 	stopBackupChan chan struct{}
+	startTime      time.Time
 }
 
 // NewServer creates a new server with the given configuration and database manager
@@ -32,6 +33,7 @@ func NewServer(cfg *config.ServerConfig, dbManager *database.Manager) *Server {
 		DBManager:      dbManager,
 		adminAuth:      NewAdminAuth(cfg.AdminAuth),
 		stopBackupChan: make(chan struct{}),
+		startTime:      time.Now(),
 	}
 
 	// Initialize S3 client if enabled
