@@ -18,23 +18,23 @@ FuckBaseでは、各コンポーネント（Manager、Database、Set、Index）�
 
 ```mermaid
 graph TD
-    A[HTTPリクエスト] --> B[HTTPサーバー]
-    B --> C[データベースマネージャ]
-    C --> D[データベース]
-    D --> E[Set]
-    D --> F[インデックス]
+    A("HTTPリクエスト") --> B("HTTPサーバー")
+    B --> C("データベースマネージャ")
+    C --> D("データベース")
+    D --> E("Set")
+    D --> F("インデックス")
     
-    C -- "mu.RLock()/mu.RUnlock()" --> G[読み取り操作]
-    C -- "mu.Lock()/mu.Unlock()" --> H[書き込み操作]
+    C -- "mu.RLock()/mu.RUnlock()" --> G("読み取り操作")
+    C -- "mu.Lock()/mu.Unlock()" --> H("書き込み操作")
     
-    D -- "mu.RLock()/mu.RUnlock()" --> I[読み取り操作]
-    D -- "mu.Lock()/mu.Unlock()" --> J[書き込み操作]
+    D -- "mu.RLock()/mu.RUnlock()" --> I("読み取り操作")
+    D -- "mu.Lock()/mu.Unlock()" --> J("書き込み操作")
     
-    E -- "mu.RLock()/mu.RUnlock()" --> K[読み取り操作]
-    E -- "mu.Lock()/mu.Unlock()" --> L[書き込み操作]
+    E -- "mu.RLock()/mu.RUnlock()" --> K("読み取り操作")
+    E -- "mu.Lock()/mu.Unlock()" --> L("書き込み操作")
     
-    F -- "mu.RLock()/mu.RUnlock()" --> M[読み取り操作]
-    F -- "mu.Lock()/mu.Unlock()" --> N[書き込み操作]
+    F -- "mu.RLock()/mu.RUnlock()" --> M("読み取り操作")
+    F -- "mu.Lock()/mu.Unlock()" --> N("書き込み操作")
 ```
 
 ## Goの同期プリミティブ
