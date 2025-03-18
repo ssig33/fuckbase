@@ -13,7 +13,7 @@ sleep 5
 
 # Run the client tests
 echo "Running client tests..."
-ruby test_fuckbase.rb
+ruby $(dirname "$0")/test_fuckbase.rb
 
 # Stop the server
 echo "Tests completed, stopping FuckBase server..."

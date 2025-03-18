@@ -4,16 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - "fuckbase.rb"
-      - "test_fuckbase.rb"
-      - "run-client-tests.sh"
+      - "ruby/fuckbase.rb"
+      - "ruby/test_fuckbase.rb"
+      - "ruby/run-client-tests.sh"
       - ".github/workflows/ruby-client-tests.yml"
   pull_request:
     branches: [main]
     paths:
-      - "fuckbase.rb"
-      - "test_fuckbase.rb"
-      - "run-client-tests.sh"
+      - "ruby/fuckbase.rb"
+      - "ruby/test_fuckbase.rb"
+      - "ruby/run-client-tests.sh"
       - ".github/workflows/ruby-client-tests.yml"
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Run tests
         run: |
-          ruby test_fuckbase.rb
+          ruby ruby/test_fuckbase.rb
 
       - name: Stop FuckBase server
         run: |

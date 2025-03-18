@@ -89,6 +89,33 @@ E2Eテストを実行するには:
 
 テスト結果は標準出力に表示されます。
 
+## Ruby クライアント
+
+FuckBaseには公式のRubyクライアントライブラリが用意されています。詳細は[Rubyクライアントのドキュメント](ruby/ruby-client-README.md)を参照してください。
+
+### 基本的な使用例
+
+```ruby
+# クライアントの作成
+client = FuckBase::Client.new(host: 'localhost', port: 8080)
+
+# データベースの作成
+db = client.create_database('my_database')
+
+# セットの作成
+users_set = db.create_set('users')
+
+# データの保存
+users_set.put('user1', {
+  'name' => 'John Doe',
+  'email' => 'john@example.com'
+})
+
+# データの取得
+user = users_set.get('user1')
+puts "User: #{user['name']}, Email: #{user['email']}"
+```
+
 ### データベースの作成
 
 ```bash
@@ -163,10 +190,11 @@ curl -X POST http://localhost:8080/set/delete -d '{
 
 詳細なドキュメントは以下のファイルを参照してください：
 
-- [仕様書](SPEC.md) - プロジェクトの詳細な仕様
-- [API仕様書](API_SPEC.md) - APIエンドポイントの詳細
-- [アーキテクチャ](ARCHITECTURE.md) - 内部設計と実装の詳細
-- [ロードマップ](ROADMAP.md) - 開発計画と今後の機能
+- [仕様書](docs/SPEC.md) - プロジェクトの詳細な仕様
+- [API仕様書](docs/API_SPEC.md) - APIエンドポイントの詳細
+- [アーキテクチャ](docs/ARCHITECTURE.md) - 内部設計と実装の詳細
+- [ロードマップ](docs/ROADMAP.md) - 開発計画と今後の機能
+- [S3バックアップ](docs/s3-backup.md) - S3バックアップと復元機能の詳細
 
 ## 開発方針
 

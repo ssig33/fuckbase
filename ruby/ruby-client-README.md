@@ -104,7 +104,8 @@ client.restore_backup('backups/my_database/20250318-123456.json')
 Run the tests with:
 
 ```bash
-./run-client-tests.sh
+# From the project root directory
+./ruby/run-client-tests.sh
 ```
 
 This script will:
