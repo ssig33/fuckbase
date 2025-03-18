@@ -10,7 +10,6 @@
 graph TD
     A[データ] -->|インデックスなし| B[全件スキャン]
     B -->|O(n)| C[結果]
-    
     A -->|インデックスあり| D[インデックス検索]
     D -->|O(1)| E[キーのリスト]
     E -->|データ取得| F[結果]
@@ -55,14 +54,11 @@ Values = {
 sequenceDiagram
     participant Index as インデックス
     participant Set as Set
-    
     Index->>Index: Values = {}（空のマップを初期化）
     Index->>Set: ForEach(callback)
-    
     loop 各エントリ(key, value)
         Set-->>Index: callback(key, value)
         Index->>Index: fieldValue = extractFieldValue(value)
-        
         alt フィールドが存在する
             Index->>Index: Values[fieldValue] = append(Values[fieldValue], key)
         else フィールドが存在しない
@@ -87,12 +83,10 @@ graph TD
     B -->|フィールド検索| C{フィールドが存在?}
     C -->|はい| D[値の型チェック]
     C -->|いいえ| E[エラー]
-    
     D -->|文字列| F[そのまま使用]
     D -->|数値| G[文字列に変換]
     D -->|ブール値| H[文字列に変換]
     D -->|その他| I[エラー]
-    
     F -->|結果| J[フィールド値]
     G -->|結果| J
     H -->|結果| J
@@ -109,16 +103,13 @@ graph TD
     A[検索開始] -->|値指定| B{値が存在?}
     B -->|はい| C[キーのリストをコピー]
     B -->|いいえ| D[空のリストを返す]
-    
     C -->|ソート指定| E{ソート順?}
     E -->|昇順| F[昇順ソート]
     E -->|降順| G[降順ソート]
     E -->|なし| H[ソートなし]
-    
     F -->|ページネーション| I[オフセットと制限を適用]
     G -->|ページネーション| I
     H -->|ページネーション| I
-    
     I -->|結果| J[キーのリスト]
 ```
 
@@ -166,7 +157,6 @@ graph TD
     A[エントリ削除] -->|フィールド値抽出| B{フィールドが存在?}
     B -->|はい| C[Values[fieldValue]からキーを削除]
     B -->|いいえ| D[何もしない]
-    
     C -->|リストが空?| E{空?}
     E -->|はい| F[Values[fieldValue]を削除]
     E -->|いいえ| G[更新されたリストを保持]
@@ -178,7 +168,6 @@ graph TD
 graph TD
     A[エントリ更新] -->|古い値からフィールド値抽出| B[古いフィールド値]
     A -->|新しい値からフィールド値抽出| C[新しいフィールド値]
-    
     B -->|削除処理| D[Values[oldFieldValue]からキーを削除]
     C -->|追加処理| E[Values[newFieldValue]にキーを追加]
 ```
