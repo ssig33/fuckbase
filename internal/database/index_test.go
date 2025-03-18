@@ -48,7 +48,7 @@ func TestIndexWithMissingField(t *testing.T) {
 		Email string
 	}
 
-	// Current behavior: This will add the data to the set but fail to update the index
+	// This will add the data to the set but not update the index
 	err = set.Put("key3", WithoutName{Age: 40, Email: "noname@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to add data without Name field: %v", err)
@@ -65,7 +65,7 @@ func TestIndexWithMissingField(t *testing.T) {
 	}
 
 	// Now manually try to update the index with this new entry
-	// With our new implementation, this should succeed and use the special "__MISSING__" value
+	// With our new implementation, this should silently skip the entry
 	rawData, err := set.GetRaw("key3")
 	if err != nil {
 		t.Fatalf("Failed to get raw data: %v", err)
@@ -76,13 +76,19 @@ func TestIndexWithMissingField(t *testing.T) {
 		t.Errorf("Failed to add entry without Name field to index: %v", err)
 	}
 
-	// Verify the entry was added to the index under the "__MISSING__" value
-	keys, err = index.Query("__MISSING__", "", 0, 0)
-	if err != nil {
-		t.Fatalf("Failed to query index: %v", err)
-	}
-	if len(keys) != 1 || keys[0] != "key3" {
-		t.Errorf("Expected index to have one entry for '__MISSING__', got %v", keys)
+	// Verify the entry was NOT added to the index
+	// We'll check all values in the index to make sure key3 is not there
+	allValues := index.GetAllValues()
+	for _, value := range allValues {
+		keys, err = index.Query(value, "", 0, 0)
+		if err != nil {
+			t.Fatalf("Failed to query index: %v", err)
+		}
+		for _, key := range keys {
+			if key == "key3" {
+				t.Errorf("Found key3 in index under value '%s', but it should not be indexed", value)
+			}
+		}
 	}
 
 	// Also verify that we can still query for the other values

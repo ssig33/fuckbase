@@ -45,7 +45,8 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 		t.Fatalf("Failed to add data without Name field: %v", err)
 	}
 
-	// Now manually update the index with this new entry
+	// Now manually try to update the index with this new entry
+	// With our new implementation, this should silently skip the entry
 	rawData, err := set.GetRaw("key3")
 	if err != nil {
 		t.Fatalf("Failed to get raw data: %v", err)
@@ -56,22 +57,13 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 		t.Errorf("Failed to add entry without Name field to index: %v", err)
 	}
 
-	// Verify the entry was added to the index under the "__MISSING__" value
-	keys, err := index.Query("__MISSING__", "", 0, 0)
-	if err != nil {
-		t.Fatalf("Failed to query index: %v", err)
-	}
-	if len(keys) != 1 || keys[0] != "key3" {
-		t.Errorf("Expected index to have one entry for '__MISSING__', got %v", keys)
-	}
-
 	// Add another value without the Name field
 	err = set.Put("key4", WithoutName{Age: 50, Email: "another@example.com"})
 	if err != nil {
 		t.Fatalf("Failed to add second data without Name field: %v", err)
 	}
 
-	// Manually update the index again
+	// Manually try to update the index again
 	rawData, err = set.GetRaw("key4")
 	if err != nil {
 		t.Fatalf("Failed to get raw data: %v", err)
@@ -82,27 +74,35 @@ func TestIndexIntegrationWithMissingField(t *testing.T) {
 		t.Errorf("Failed to add second entry without Name field to index: %v", err)
 	}
 
-	// Verify both entries are now in the index under "__MISSING__"
-	keys, err = index.Query("__MISSING__", "", 0, 0)
+	// Verify that neither key3 nor key4 were added to the index
+	// We'll check all values in the index to make sure key3 and key4 are not there
+	allValues := index.GetAllValues()
+	for _, value := range allValues {
+		keys, err := index.Query(value, "", 0, 0)
+		if err != nil {
+			t.Fatalf("Failed to query index: %v", err)
+		}
+		for _, key := range keys {
+			if key == "key3" || key == "key4" {
+				t.Errorf("Found key3 or key4 in index under value '%s', but they should not be indexed", value)
+			}
+		}
+	}
+
+	// Verify that we can still query for the other values
+	keys, err := index.Query("Alice", "", 0, 0)
 	if err != nil {
 		t.Fatalf("Failed to query index: %v", err)
 	}
-	if len(keys) != 2 {
-		t.Errorf("Expected index to have two entries for '__MISSING__', got %d entries", len(keys))
+	if len(keys) != 1 || keys[0] != "key1" {
+		t.Errorf("Expected index to have one entry for 'Alice', got %v", keys)
 	}
-	
-	// Check if both keys are present
-	foundKey3 := false
-	foundKey4 := false
-	for _, key := range keys {
-		if key == "key3" {
-			foundKey3 = true
-		}
-		if key == "key4" {
-			foundKey4 = true
-		}
+
+	keys, err = index.Query("Bob", "", 0, 0)
+	if err != nil {
+		t.Fatalf("Failed to query index: %v", err)
 	}
-	if !foundKey3 || !foundKey4 {
-		t.Errorf("Expected to find both 'key3' and 'key4' in the index, got %v", keys)
+	if len(keys) != 1 || keys[0] != "key2" {
+		t.Errorf("Expected index to have one entry for 'Bob', got %v", keys)
 	}
 }
