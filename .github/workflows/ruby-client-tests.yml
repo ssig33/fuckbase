@@ -44,4 +44,4 @@ jobs:
 
       - name: Stop FuckBase server
         run: |
-          docker-compose down
+          docker compose down
