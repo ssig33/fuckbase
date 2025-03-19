@@ -196,7 +196,7 @@ classDiagram
         +PrimaryField string
         +SortFields []string
         +Values map[string][]string
-        +SortValues map[string]map[string]interface{}
+        +SortValues map[string]map[string]interface
         +mu sync.RWMutex
     }
 ```
