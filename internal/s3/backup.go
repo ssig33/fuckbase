@@ -34,9 +34,11 @@ type SetBackup struct {
 
 // IndexBackup represents a backup of a single index
 type IndexBackup struct {
-	Name    string `json:"name"`
-	SetName string `json:"set_name"`
-	Field   string `json:"field"`
+	Name        string   `json:"name"`
+	SetName     string   `json:"set_name"`
+	Field       string   `json:"field"`
+	Type        int      `json:"type"`
+	SortFields  []string `json:"sort_fields,omitempty"`
 }
 
 // FullBackup represents a full backup of all databases
@@ -189,9 +191,17 @@ func (bm *BackupManager) createDatabaseBackup(db *database.Database) (DatabaseBa
 		}
 
 		indexBackup := IndexBackup{
-			Name:    index.Name,
-			SetName: index.SetName,
-			Field:   index.Field,
+			Name:    index.GetName(),
+			SetName: index.GetSetName(),
+			Field:   index.GetField(),
+			Type:    int(index.GetType()),
+		}
+
+		// Add sort fields for sortable indexes
+		if index.GetType() == database.SortableIndexType {
+			if sortableIndex, ok := index.(*database.SortableIndex); ok {
+				indexBackup.SortFields = sortableIndex.SortFields
+			}
 		}
 
 		backup.Indexes[indexName] = indexBackup
@@ -247,7 +257,18 @@ func (bm *BackupManager) RestoreDatabase(objectName string) error {
 
 	// Restore indexes
 	for _, indexBackup := range backup.Indexes {
-		_, err := db.CreateIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field)
+		var err error
+		
+		// Create the appropriate type of index
+		if indexBackup.Type == int(database.BasicIndexType) {
+			_, err = db.CreateIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field)
+		} else if indexBackup.Type == int(database.SortableIndexType) {
+			_, err = db.CreateSortableIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field, indexBackup.SortFields)
+		} else {
+			logger.Error("Unknown index type %d for index %s", indexBackup.Type, indexBackup.Name)
+			continue
+		}
+		
 		if err != nil {
 			logger.Error("Failed to create index %s: %v", indexBackup.Name, err)
 			continue
@@ -307,7 +328,18 @@ func (bm *BackupManager) RestoreAllDatabases(objectName string) error {
 
 		// Restore indexes
 		for _, indexBackup := range dbBackup.Indexes {
-			_, err := db.CreateIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field)
+			var err error
+			
+			// Create the appropriate type of index
+			if indexBackup.Type == int(database.BasicIndexType) {
+				_, err = db.CreateIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field)
+			} else if indexBackup.Type == int(database.SortableIndexType) {
+				_, err = db.CreateSortableIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field, indexBackup.SortFields)
+			} else {
+				logger.Error("Unknown index type %d for index %s", indexBackup.Type, indexBackup.Name)
+				continue
+			}
+			
 			if err != nil {
 				logger.Error("Failed to create index %s: %v", indexBackup.Name, err)
 				continue

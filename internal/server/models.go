@@ -185,3 +185,56 @@ type RestoreBackupRequest struct {
 		Password string `json:"password"`
 	} `json:"admin_auth"`
 }
+
+// CreateSortableIndexRequest is the request structure for creating a sortable index
+type CreateSortableIndexRequest struct {
+	Database     string   `json:"database"`
+	Set          string   `json:"set"`
+	Name         string   `json:"name"`
+	PrimaryField string   `json:"primary_field"`
+	SortFields   []string `json:"sort_fields"`
+	Auth         struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"auth"`
+}
+
+// SortField represents a sort field and its order
+type SortField struct {
+	Field string `json:"field"`
+	Order string `json:"order"` // "asc" or "desc"
+}
+
+// Pagination represents pagination parameters
+type Pagination struct {
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
+}
+
+// QuerySortedIndexRequest is the request structure for querying a sortable index with single field sorting
+type QuerySortedIndexRequest struct {
+	Database   string     `json:"database"`
+	Set        string     `json:"set"`
+	Index      string     `json:"index"`
+	Value      string     `json:"value"`
+	Sort       SortField  `json:"sort"`
+	Pagination Pagination `json:"pagination,omitempty"`
+	Auth       struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"auth"`
+}
+
+// QueryMultiSortedIndexRequest is the request structure for querying a sortable index with multi-field sorting
+type QueryMultiSortedIndexRequest struct {
+	Database   string      `json:"database"`
+	Set        string      `json:"set"`
+	Index      string      `json:"index"`
+	Value      string      `json:"value"`
+	Sort       []SortField `json:"sort"`
+	Pagination Pagination  `json:"pagination,omitempty"`
+	Auth       struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	} `json:"auth"`
+}

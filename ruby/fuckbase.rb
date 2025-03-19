@@ -145,6 +145,28 @@ class FuckBase
       post('/index/create', payload)
     end
 
+    # Create a sortable index on a field in a set
+    #
+    # @param database [String] The name of the database
+    # @param set [String] The name of the set
+    # @param name [String] The name of the index
+    # @param primary_field [String] The primary field to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param auth [Hash] Authentication for the database (optional)
+    # @return [Hash] The response from the server
+    def create_sortable_index(database, set, name, primary_field, sort_fields, auth: nil)
+      payload = {
+        database: database,
+        set: set,
+        name: name,
+        primary_field: primary_field,
+        sort_fields: sort_fields
+      }
+      payload[:auth] = auth if auth
+
+      post('/index/create/sortable', payload)
+    end
+
     # Drop an index
     #
     # @param database [String] The name of the database
@@ -183,6 +205,170 @@ class FuckBase
         {
           count: response.dig('data', 'count'),
           data: response.dig('data', 'data')
+        }
+      end
+    end
+
+    # Query a sortable index with sorting
+    #
+    # @param database [String] The name of the database
+    # @param set [String] The name of the set
+    # @param index [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @param auth [Hash] Authentication for the database (optional)
+    # @return [Hash] The response from the server
+    def query_sorted(database, set, index, value, sort_field, ascending: true, auth: nil)
+      payload = {
+        database: database,
+        set: set,
+        index: index,
+        value: value,
+        sort: {
+          field: sort_field,
+          order: ascending ? 'asc' : 'desc'
+        }
+      }
+      payload[:auth] = auth if auth
+
+      response = post('/index/query/sorted', payload)
+      if response['status'] == 'success'
+        {
+          count: response['count'],
+          total: response['total'],
+          data: response['data']
+        }
+      end
+    end
+
+    # Query a sortable index with sorting and pagination
+    #
+    # @param database [String] The name of the database
+    # @param set [String] The name of the set
+    # @param index [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @param auth [Hash] Authentication for the database (optional)
+    # @return [Hash] The response from the server
+    def query_sorted_with_pagination(database, set, index, value, sort_field, ascending: true, offset: 0, limit: 10, auth: nil)
+      payload = {
+        database: database,
+        set: set,
+        index: index,
+        value: value,
+        sort: {
+          field: sort_field,
+          order: ascending ? 'asc' : 'desc'
+        },
+        pagination: {
+          offset: offset,
+          limit: limit
+        }
+      }
+      payload[:auth] = auth if auth
+
+      response = post('/index/query/sorted', payload)
+      if response['status'] == 'success'
+        {
+          count: response['count'],
+          total: response['total'],
+          offset: response['offset'],
+          limit: response['limit'],
+          data: response['data']
+        }
+      end
+    end
+
+    # Query a sortable index with multi-field sorting
+    #
+    # @param database [String] The name of the database
+    # @param set [String] The name of the set
+    # @param index [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @param auth [Hash] Authentication for the database (optional)
+    # @return [Hash] The response from the server
+    def query_multi_sorted(database, set, index, value, sort_fields, ascending: nil, auth: nil)
+      # Default to all ascending if not specified
+      ascending ||= Array.new(sort_fields.length, true)
+      
+      # Convert to array of sort specifications
+      sort_specs = sort_fields.zip(ascending).map do |field, asc|
+        {
+          field: field,
+          order: asc ? 'asc' : 'desc'
+        }
+      end
+
+      payload = {
+        database: database,
+        set: set,
+        index: index,
+        value: value,
+        sort: sort_specs
+      }
+      payload[:auth] = auth if auth
+
+      response = post('/index/query/multi-sorted', payload)
+      if response['status'] == 'success'
+        {
+          count: response['count'],
+          total: response['total'],
+          data: response['data']
+        }
+      end
+    end
+
+    # Query a sortable index with multi-field sorting and pagination
+    #
+    # @param database [String] The name of the database
+    # @param set [String] The name of the set
+    # @param index [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @param auth [Hash] Authentication for the database (optional)
+    # @return [Hash] The response from the server
+    def query_multi_sorted_with_pagination(database, set, index, value, sort_fields, ascending: nil, offset: 0, limit: 10, auth: nil)
+      # Default to all ascending if not specified
+      ascending ||= Array.new(sort_fields.length, true)
+      
+      # Convert to array of sort specifications
+      sort_specs = sort_fields.zip(ascending).map do |field, asc|
+        {
+          field: field,
+          order: asc ? 'asc' : 'desc'
+        }
+      end
+
+      payload = {
+        database: database,
+        set: set,
+        index: index,
+        value: value,
+        sort: sort_specs,
+        pagination: {
+          offset: offset,
+          limit: limit
+        }
+      }
+      payload[:auth] = auth if auth
+
+      response = post('/index/query/multi-sorted', payload)
+      if response['status'] == 'success'
+        {
+          count: response['count'],
+          total: response['total'],
+          offset: response['offset'],
+          limit: response['limit'],
+          data: response['data']
         }
       end
     end
@@ -311,6 +497,17 @@ class FuckBase
       @client.create_index(@name, set_name, index_name, field, auth: @auth)
     end
 
+    # Create a sortable index on a field in a set
+    #
+    # @param set_name [String] The name of the set
+    # @param index_name [String] The name of the index
+    # @param primary_field [String] The primary field to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @return [Hash] The response from the server
+    def create_sortable_index(set_name, index_name, primary_field, sort_fields)
+      @client.create_sortable_index(@name, set_name, index_name, primary_field, sort_fields, auth: @auth)
+    end
+
     # Drop an index
     #
     # @param set_name [String] The name of the set
@@ -329,6 +526,58 @@ class FuckBase
     # @return [Hash] The query results
     def query_index(set_name, index_name, value, sort: 'asc')
       @client.query_index(@name, set_name, index_name, value, sort: sort, auth: @auth)
+    end
+
+    # Query a sortable index with sorting
+    #
+    # @param set_name [String] The name of the set
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @return [Hash] The query results
+    def query_sorted(set_name, index_name, value, sort_field, ascending: true)
+      @client.query_sorted(@name, set_name, index_name, value, sort_field, ascending: ascending, auth: @auth)
+    end
+
+    # Query a sortable index with sorting and pagination
+    #
+    # @param set_name [String] The name of the set
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @return [Hash] The query results
+    def query_sorted_with_pagination(set_name, index_name, value, sort_field, ascending: true, offset: 0, limit: 10)
+      @client.query_sorted_with_pagination(@name, set_name, index_name, value, sort_field, ascending: ascending, offset: offset, limit: limit, auth: @auth)
+    end
+
+    # Query a sortable index with multi-field sorting
+    #
+    # @param set_name [String] The name of the set
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @return [Hash] The query results
+    def query_multi_sorted(set_name, index_name, value, sort_fields, ascending: nil)
+      @client.query_multi_sorted(@name, set_name, index_name, value, sort_fields, ascending: ascending, auth: @auth)
+    end
+
+    # Query a sortable index with multi-field sorting and pagination
+    #
+    # @param set_name [String] The name of the set
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @return [Hash] The query results
+    def query_multi_sorted_with_pagination(set_name, index_name, value, sort_fields, ascending: nil, offset: 0, limit: 10)
+      @client.query_multi_sorted_with_pagination(@name, set_name, index_name, value, sort_fields, ascending: ascending, offset: offset, limit: limit, auth: @auth)
     end
 
     # Create a backup of the database
@@ -392,6 +641,16 @@ class FuckBase
       @database.create_index(@name, index_name, field)
     end
 
+    # Create a sortable index on a field in this set
+    #
+    # @param index_name [String] The name of the index
+    # @param primary_field [String] The primary field to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @return [Hash] The response from the server
+    def create_sortable_index(index_name, primary_field, sort_fields)
+      @database.create_sortable_index(@name, index_name, primary_field, sort_fields)
+    end
+
     # Drop an index from this set
     #
     # @param index_name [String] The name of the index
@@ -408,6 +667,54 @@ class FuckBase
     # @return [Hash] The query results
     def query_index(index_name, value, sort: 'asc')
       @database.query_index(@name, index_name, value, sort: sort)
+    end
+
+    # Query a sortable index with sorting
+    #
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @return [Hash] The query results
+    def query_sorted(index_name, value, sort_field, ascending: true)
+      @database.query_sorted(@name, index_name, value, sort_field, ascending: ascending)
+    end
+
+    # Query a sortable index with sorting and pagination
+    #
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_field [String] The field to sort by
+    # @param ascending [Boolean] Whether to sort in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @return [Hash] The query results
+    def query_sorted_with_pagination(index_name, value, sort_field, ascending: true, offset: 0, limit: 10)
+      @database.query_sorted_with_pagination(@name, index_name, value, sort_field, ascending: ascending, offset: offset, limit: limit)
+    end
+
+    # Query a sortable index with multi-field sorting
+    #
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @return [Hash] The query results
+    def query_multi_sorted(index_name, value, sort_fields, ascending: nil)
+      @database.query_multi_sorted(@name, index_name, value, sort_fields, ascending: ascending)
+    end
+
+    # Query a sortable index with multi-field sorting and pagination
+    #
+    # @param index_name [String] The name of the index
+    # @param value [String] The primary field value to filter on
+    # @param sort_fields [Array<String>] The fields to sort by
+    # @param ascending [Array<Boolean>] Whether to sort each field in ascending order
+    # @param offset [Integer] The offset for pagination
+    # @param limit [Integer] The limit for pagination
+    # @return [Hash] The query results
+    def query_multi_sorted_with_pagination(index_name, value, sort_fields, ascending: nil, offset: 0, limit: 10)
+      @database.query_multi_sorted_with_pagination(@name, index_name, value, sort_fields, ascending: ascending, offset: offset, limit: limit)
     end
   end
 end

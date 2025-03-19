@@ -7,8 +7,8 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-// Index represents an index on a field in a set
-type Index struct {
+// BasicIndex represents a basic index on a single field in a set
+type BasicIndex struct {
 	Name    string
 	SetName string
 	Field   string
@@ -16,9 +16,9 @@ type Index struct {
 	mu      sync.RWMutex
 }
 
-// NewIndex creates a new index
-func NewIndex(name string, setName string, field string) *Index {
-	return &Index{
+// NewIndex creates a new basic index
+func NewIndex(name string, setName string, field string) *BasicIndex {
+	return &BasicIndex{
 		Name:    name,
 		SetName: setName,
 		Field:   field,
@@ -28,7 +28,7 @@ func NewIndex(name string, setName string, field string) *Index {
 
 // Build builds the index by scanning all entries in the set
 // Entries without the indexed field are silently skipped
-func (idx *Index) Build(set *Set) error {
+func (idx *BasicIndex) Build(set *Set) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -54,7 +54,7 @@ func (idx *Index) Build(set *Set) error {
 }
 
 // extractFieldValue extracts the value of the indexed field from MessagePack encoded data
-func (idx *Index) extractFieldValue(data []byte) (string, error) {
+func (idx *BasicIndex) extractFieldValue(data []byte) (string, error) {
 	var m map[string]interface{}
 	if err := msgpack.Unmarshal(data, &m); err != nil {
 		return "", fmt.Errorf("failed to decode MessagePack data: %w", err)
@@ -84,7 +84,7 @@ func (idx *Index) extractFieldValue(data []byte) (string, error) {
 
 // AddEntry adds an entry to the index
 // If the field is not found in the data, the entry is silently skipped (not added to the index)
-func (idx *Index) AddEntry(key string, value []byte) error {
+func (idx *BasicIndex) AddEntry(key string, value []byte) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -105,7 +105,7 @@ func (idx *Index) AddEntry(key string, value []byte) error {
 
 // RemoveEntry removes an entry from the index
 // If the field is not found in the data, the operation is silently skipped
-func (idx *Index) RemoveEntry(key string, value []byte) error {
+func (idx *BasicIndex) RemoveEntry(key string, value []byte) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -143,7 +143,7 @@ func (idx *Index) RemoveEntry(key string, value []byte) error {
 
 // UpdateEntry updates an entry in the index
 // If the field is not found in either the old or new data, those operations are silently skipped
-func (idx *Index) UpdateEntry(key string, oldValue, newValue []byte) error {
+func (idx *BasicIndex) UpdateEntry(key string, oldValue, newValue []byte) error {
 	// Remove the old entry
 	if err := idx.RemoveEntry(key, oldValue); err != nil {
 		return err
@@ -154,7 +154,7 @@ func (idx *Index) UpdateEntry(key string, oldValue, newValue []byte) error {
 }
 
 // Query queries the index for keys matching the given value
-func (idx *Index) Query(value string) ([]string, error) {
+func (idx *BasicIndex) Query(value string) ([]string, error) {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
@@ -172,7 +172,7 @@ func (idx *Index) Query(value string) ([]string, error) {
 }
 
 // GetAllValues returns all unique values in the index
-func (idx *Index) GetAllValues() []string {
+func (idx *BasicIndex) GetAllValues() []string {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
@@ -185,7 +185,7 @@ func (idx *Index) GetAllValues() []string {
 }
 
 // Size returns the number of unique values in the index
-func (idx *Index) Size() int {
+func (idx *BasicIndex) Size() int {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
 
@@ -193,9 +193,29 @@ func (idx *Index) Size() int {
 }
 
 // Clear clears the index
-func (idx *Index) Clear() {
+func (idx *BasicIndex) Clear() {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
 	idx.Values = make(map[string][]string)
+}
+
+// GetName returns the name of the index
+func (idx *BasicIndex) GetName() string {
+	return idx.Name
+}
+
+// GetSetName returns the name of the set this index is for
+func (idx *BasicIndex) GetSetName() string {
+	return idx.SetName
+}
+
+// GetField returns the field this index is on
+func (idx *BasicIndex) GetField() string {
+	return idx.Field
+}
+
+// GetType returns the type of this index
+func (idx *BasicIndex) GetType() IndexType {
+	return BasicIndexType
 }

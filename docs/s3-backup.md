@@ -71,12 +71,12 @@ POST /backup/list
 ### Restore from Backup
 
 To restore from a backup:
-
 ```
 POST /backup/restore
 {
   "backup_name": "backups/your_database_name/20250318-140947.json"
 }
+```
 ```
 
 ## Backup Storage Structure

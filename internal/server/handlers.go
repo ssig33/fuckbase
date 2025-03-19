@@ -440,6 +440,14 @@ func (s *Server) handleSetPut(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if the key already exists and get the old value for index updates
+	var oldRawValue []byte
+	keyExists := false
+	oldRawValue, err = set.GetRaw(req.Key)
+	if err == nil {
+		keyExists = true
+	}
+
 	// Parse the value from JSON
 	var value interface{}
 	if err := json.Unmarshal(req.Value, &value); err != nil {
@@ -453,19 +461,25 @@ func (s *Server) handleSetPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update indexes if any
-	for _, index := range db.Indexes {
-		if index.SetName == req.Set {
-			// Get the raw value
-			rawValue, err := set.GetRaw(req.Key)
-			if err != nil {
-				logger.Error("Failed to get raw value for index update: %v", err)
-				continue
-			}
-
-			// Update the index
-			if err := index.AddEntry(req.Key, rawValue); err != nil {
-				logger.Error("Failed to update index: %v", err)
+	// Get the new raw value for index updates
+	rawValue, err := set.GetRaw(req.Key)
+	if err != nil {
+		logger.Error("Failed to get raw value for index update: %v", err)
+	} else {
+		// Update indexes if any
+		for _, index := range db.Indexes {
+			if index.GetSetName() == req.Set {
+				if keyExists {
+					// Key exists, update the entry
+					if err := index.UpdateEntry(req.Key, oldRawValue, rawValue); err != nil {
+						logger.Error("Failed to update index entry: %v", err)
+					}
+				} else {
+					// Key doesn't exist, add a new entry
+					if err := index.AddEntry(req.Key, rawValue); err != nil {
+						logger.Error("Failed to add index entry: %v", err)
+					}
+				}
 			}
 		}
 	}
@@ -560,7 +574,7 @@ func (s *Server) handleSetDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Update indexes if any
 	for _, index := range db.Indexes {
-		if index.SetName == req.Set {
+		if index.GetSetName() == req.Set {
 			// Remove the entry from the index
 			if err := index.RemoveEntry(req.Key, rawValue); err != nil {
 				logger.Error("Failed to update index: %v", err)
@@ -792,7 +806,7 @@ func (s *Server) handleIndexDrop(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Drop index
-	if err := db.DeleteIndex(req.Name); err != nil {
+	if err := db.DropIndex(req.Name); err != nil {
 		logger.Error("Failed to drop index: %v", err)
 		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to drop index")
 		return
@@ -919,6 +933,399 @@ func (s *Server) handleIndexQuery(w http.ResponseWriter, r *http.Request) {
 			"count": len(results),
 			"data":  results,
 		},
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+// handleSortableIndexCreate handles the /index/create/sortable endpoint
+func (s *Server) handleSortableIndexCreate(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		logRequest(r, start, http.StatusOK)
+	}()
+
+	// Check if this is a POST request
+	if r.Method != http.MethodPost {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Only POST method is allowed")
+		return
+	}
+
+	// Parse request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to read request body")
+		return
+	}
+
+	var req CreateSortableIndexRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to parse request body")
+		return
+	}
+
+	// Validate request
+	if req.Database == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Database name is required")
+		return
+	}
+	if req.Set == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Set name is required")
+		return
+	}
+	if req.Name == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Index name is required")
+		return
+	}
+	if req.PrimaryField == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Primary field is required")
+		return
+	}
+	if len(req.SortFields) == 0 {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "At least one sort field is required")
+		return
+	}
+
+	// Get database
+	db, err := s.DBManager.GetDatabase(req.Database)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "DB_NOT_FOUND", "Database not found")
+		return
+	}
+
+	// Check database authentication
+	username, password, hasAuth := ExtractDatabaseAuth(r)
+	if !hasAuth {
+		username = req.Auth.Username
+		password = req.Auth.Password
+	}
+	if !db.Authenticate(username, password) {
+		writeErrorResponse(w, http.StatusUnauthorized, "AUTH_FAILED", "Authentication failed")
+		return
+	}
+
+	// Create sortable index
+	index, err := db.CreateSortableIndex(req.Name, req.Set, req.PrimaryField, req.SortFields)
+	if err != nil {
+		logger.Error("Failed to create sortable index: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create sortable index")
+		return
+	}
+
+	logger.Info("Created sortable index: %s on primary field: %s with sort fields: %v for set: %s in database: %s",
+		req.Name, req.PrimaryField, req.SortFields, req.Set, req.Database)
+
+	// Return success response
+	response := Response{
+		Status:  "success",
+		Message: "Sortable index created successfully",
+		Data: map[string]string{
+			"index": index.Name,
+		},
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+// handleSortedIndexQuery handles the /index/query/sorted endpoint
+func (s *Server) handleSortedIndexQuery(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		logRequest(r, start, http.StatusOK)
+	}()
+
+	// Check if this is a POST request
+	if r.Method != http.MethodPost {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Only POST method is allowed")
+		return
+	}
+
+	// Parse request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to read request body")
+		return
+	}
+
+	var req QuerySortedIndexRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to parse request body")
+		return
+	}
+
+	// Validate request
+	if req.Database == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Database name is required")
+		return
+	}
+	if req.Set == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Set name is required")
+		return
+	}
+	if req.Index == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Index name is required")
+		return
+	}
+	if req.Value == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Value is required")
+		return
+	}
+	if req.Sort.Field == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Sort field is required")
+		return
+	}
+
+	// Set default values
+	if req.Sort.Order == "" {
+		req.Sort.Order = "asc"
+	}
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = 10
+	}
+
+	// Get database
+	db, err := s.DBManager.GetDatabase(req.Database)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "DB_NOT_FOUND", "Database not found")
+		return
+	}
+
+	// Check database authentication
+	username, password, hasAuth := ExtractDatabaseAuth(r)
+	if !hasAuth {
+		username = req.Auth.Username
+		password = req.Auth.Password
+	}
+	if !db.Authenticate(username, password) {
+		writeErrorResponse(w, http.StatusUnauthorized, "AUTH_FAILED", "Authentication failed")
+		return
+	}
+
+	// Get set
+	set, err := db.GetSet(req.Set)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "SET_NOT_FOUND", "Set not found")
+		return
+	}
+
+	// Get index
+	index, err := db.GetIndex(req.Index)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "INDEX_NOT_FOUND", "Index not found")
+		return
+	}
+
+	// Check if index is a sortable index
+	sortableIndex, ok := index.(*database.SortableIndex)
+	if !ok {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_INDEX_TYPE", "Index is not a sortable index")
+		return
+	}
+
+	// Query the index
+	var keys []string
+	ascending := req.Sort.Order == "asc"
+
+	if req.Pagination.Offset > 0 || req.Pagination.Limit > 0 {
+		// Query with pagination
+		keys, err = sortableIndex.QuerySortedWithPagination(req.Value, req.Sort.Field, ascending, req.Pagination.Offset, req.Pagination.Limit)
+	} else {
+		// Query without pagination
+		keys, err = sortableIndex.QuerySorted(req.Value, req.Sort.Field, ascending)
+	}
+
+	if err != nil {
+		logger.Error("Failed to query sortable index: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to query sortable index")
+		return
+	}
+
+	// Get the values for the keys
+	results := make([]map[string]interface{}, 0, len(keys))
+	for _, key := range keys {
+		var value interface{}
+		if err := set.Get(key, &value); err != nil {
+			logger.Error("Failed to get value for key %s: %v", key, err)
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"key":   key,
+			"value": value,
+		})
+	}
+
+	// Get total count (without pagination)
+	totalKeys, err := sortableIndex.Query(req.Value)
+	if err != nil {
+		logger.Error("Failed to get total count: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get total count")
+		return
+	}
+
+	logger.Info("Queried sortable index: %s with value: %s, sort field: %s, order: %s in set: %s in database: %s, found %d results",
+		req.Index, req.Value, req.Sort.Field, req.Sort.Order, req.Set, req.Database, len(results))
+
+	// Return success response
+	response := map[string]interface{}{
+		"status": "success",
+		"count":  len(results),
+		"total":  len(totalKeys),
+		"offset": req.Pagination.Offset,
+		"limit":  req.Pagination.Limit,
+		"data":   results,
+	}
+	writeJSONResponse(w, http.StatusOK, response)
+}
+
+// handleMultiSortedIndexQuery handles the /index/query/multi-sorted endpoint
+func (s *Server) handleMultiSortedIndexQuery(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		logRequest(r, start, http.StatusOK)
+	}()
+
+	// Check if this is a POST request
+	if r.Method != http.MethodPost {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "Only POST method is allowed")
+		return
+	}
+
+	// Parse request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to read request body")
+		return
+	}
+
+	var req QueryMultiSortedIndexRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Failed to parse request body")
+		return
+	}
+
+	// Validate request
+	if req.Database == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Database name is required")
+		return
+	}
+	if req.Set == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Set name is required")
+		return
+	}
+	if req.Index == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Index name is required")
+		return
+	}
+	if req.Value == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "Value is required")
+		return
+	}
+	if len(req.Sort) == 0 {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_REQUEST", "At least one sort field is required")
+		return
+	}
+
+	// Set default values
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = 10
+	}
+
+	// Get database
+	db, err := s.DBManager.GetDatabase(req.Database)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "DB_NOT_FOUND", "Database not found")
+		return
+	}
+
+	// Check database authentication
+	username, password, hasAuth := ExtractDatabaseAuth(r)
+	if !hasAuth {
+		username = req.Auth.Username
+		password = req.Auth.Password
+	}
+	if !db.Authenticate(username, password) {
+		writeErrorResponse(w, http.StatusUnauthorized, "AUTH_FAILED", "Authentication failed")
+		return
+	}
+
+	// Get set
+	set, err := db.GetSet(req.Set)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "SET_NOT_FOUND", "Set not found")
+		return
+	}
+
+	// Get index
+	index, err := db.GetIndex(req.Index)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "INDEX_NOT_FOUND", "Index not found")
+		return
+	}
+
+	// Check if index is a sortable index
+	sortableIndex, ok := index.(*database.SortableIndex)
+	if !ok {
+		writeErrorResponse(w, http.StatusBadRequest, "INVALID_INDEX_TYPE", "Index is not a sortable index")
+		return
+	}
+
+	// Extract sort fields and orders
+	sortFields := make([]string, len(req.Sort))
+	ascending := make([]bool, len(req.Sort))
+	for i, sort := range req.Sort {
+		sortFields[i] = sort.Field
+		ascending[i] = sort.Order == "asc"
+	}
+
+	// Query the index
+	var keys []string
+	if req.Pagination.Offset > 0 || req.Pagination.Limit > 0 {
+		// Query with pagination
+		keys, err = sortableIndex.QueryMultiSortedWithPagination(req.Value, sortFields, ascending, req.Pagination.Offset, req.Pagination.Limit)
+	} else {
+		// Query without pagination
+		keys, err = sortableIndex.QueryMultiSorted(req.Value, sortFields, ascending)
+	}
+
+	if err != nil {
+		logger.Error("Failed to query sortable index: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to query sortable index")
+		return
+	}
+
+	// Get the values for the keys
+	results := make([]map[string]interface{}, 0, len(keys))
+	for _, key := range keys {
+		var value interface{}
+		if err := set.Get(key, &value); err != nil {
+			logger.Error("Failed to get value for key %s: %v", key, err)
+			continue
+		}
+
+		results = append(results, map[string]interface{}{
+			"key":   key,
+			"value": value,
+		})
+	}
+
+	// Get total count (without pagination)
+	totalKeys, err := sortableIndex.Query(req.Value)
+	if err != nil {
+		logger.Error("Failed to get total count: %v", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get total count")
+		return
+	}
+
+	logger.Info("Queried multi-sorted index: %s with value: %s, sort fields: %v in set: %s in database: %s, found %d results",
+		req.Index, req.Value, sortFields, req.Set, req.Database, len(results))
+
+	// Return success response
+	response := map[string]interface{}{
+		"status": "success",
+		"count":  len(results),
+		"total":  len(totalKeys),
+		"offset": req.Pagination.Offset,
+		"limit":  req.Pagination.Limit,
+		"data":   results,
 	}
 	writeJSONResponse(w, http.StatusOK, response)
 }

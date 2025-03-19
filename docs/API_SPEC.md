@@ -193,7 +193,7 @@ POST /set/list
 
 ### インデックス操作
 
-#### インデックス作成
+#### 基本インデックス作成
 
 ```
 POST /index/create
@@ -218,7 +218,42 @@ POST /index/create
 }
 ```
 
-#### インデックスによるクエリ
+#### ソート可能インデックス作成
+
+```
+POST /index/create/sortable
+```
+
+**説明**:
+このエンドポイントは、ソート可能インデックスを作成します。ソート可能インデックスは、プライマリフィールド（フィルタリング用）と1つ以上のソートフィールド（ソート用）を持ちます。これにより、「あるカラムの値で絞った上で、他のカラムでソート」という操作が効率的に実行できます。
+
+**リクエスト**:
+```json
+{
+  "database": "my_database",
+  "set": "users",
+  "name": "department_hiredate_index",
+  "primary_field": "department",   // フィルタリングに使用するフィールド
+  "sort_fields": ["hireDate", "name"] // ソートに使用するフィールド（複数指定可能）
+}
+```
+
+**レスポンス**:
+```json
+{
+  "status": "success",
+  "message": "Sortable index created successfully",
+  "index": "department_hiredate_index"
+}
+```
+
+**注意**:
+- `primary_field`は必須で、このフィールドの値に基づいてデータがフィルタリングされます。
+- `sort_fields`は1つ以上のフィールドを指定でき、これらのフィールドに基づいてデータがソートされます。
+- 複数のソートフィールドを指定した場合、最初のフィールドで同じ値を持つエントリは、次のフィールドでソートされます。
+- インデックス作成時に、指定されたフィールドが存在しないエントリは、そのフィールドについてはインデックスに追加されません。
+
+#### 基本インデックスによるクエリ
 
 ```
 POST /index/query
@@ -251,6 +286,151 @@ POST /index/query
   ]
 }
 ```
+
+#### ソート可能インデックスによるクエリ
+
+```
+POST /index/query/sorted
+```
+
+**説明**:
+このエンドポイントは、ソート可能インデックスを使用して、プライマリフィールドの値でデータをフィルタリングし、指定されたソートフィールドでソートした結果を返します。例えば、「部署が"営業"の従業員を、入社日の新しい順に取得する」といったクエリが可能です。
+
+**リクエスト**:
+```json
+{
+  "database": "my_database",
+  "set": "users",
+  "index": "department_hiredate_index",
+  "value": "sales",           // プライマリフィールド（department）の値
+  "sort": {
+    "field": "hireDate",      // ソートフィールド
+    "order": "desc"           // ソート順序: "asc"（昇順）または "desc"（降順）
+  },
+  "pagination": {
+    "offset": 0,              // 結果セットの開始位置
+    "limit": 10               // 取得する最大件数
+  }
+}
+```
+
+**レスポンス**:
+```json
+{
+  "status": "success",
+  "count": 3,                 // 返された結果の件数
+  "total": 3,                 // フィルタリング条件に一致する総件数
+  "offset": 0,
+  "limit": 10,
+  "data": [
+    {
+      "key": "user456",
+      "value": {
+        "name": "Jane Smith",
+        "department": "sales",
+        "hireDate": "2023-05-15",
+        "position": "Sales Manager"
+      }
+    },
+    {
+      "key": "user789",
+      "value": {
+        "name": "Bob Johnson",
+        "department": "sales",
+        "hireDate": "2022-11-03",
+        "position": "Sales Representative"
+      }
+    },
+    {
+      "key": "user123",
+      "value": {
+        "name": "John Doe",
+        "department": "sales",
+        "hireDate": "2021-08-20",
+        "position": "Sales Director"
+      }
+    }
+  ]
+}
+```
+
+#### 複数条件ソートによるクエリ
+
+```
+POST /index/query/multi-sorted
+```
+
+**説明**:
+このエンドポイントは、ソート可能インデックスを使用して、プライマリフィールドの値でデータをフィルタリングし、複数のソートフィールドによる多段ソートを適用した結果を返します。例えば、「部署が"営業"の従業員を、役職の昇順、その中で入社日の新しい順にソートする」といった複雑なクエリが可能です。
+
+**リクエスト**:
+```json
+{
+  "database": "my_database",
+  "set": "users",
+  "index": "department_hiredate_index",
+  "value": "sales",           // プライマリフィールド（department）の値
+  "sort": [
+    {
+      "field": "position",    // 第1ソートフィールド
+      "order": "asc"          // 第1ソートの順序: "asc"（昇順）
+    },
+    {
+      "field": "hireDate",    // 第2ソートフィールド
+      "order": "desc"         // 第2ソートの順序: "desc"（降順）
+    }
+  ],
+  "pagination": {
+    "offset": 0,              // 結果セットの開始位置
+    "limit": 10               // 取得する最大件数
+  }
+}
+```
+
+**レスポンス**:
+```json
+{
+  "status": "success",
+  "count": 3,                 // 返された結果の件数
+  "total": 3,                 // フィルタリング条件に一致する総件数
+  "offset": 0,
+  "limit": 10,
+  "data": [
+    {
+      "key": "user123",
+      "value": {
+        "name": "John Doe",
+        "department": "sales",
+        "hireDate": "2021-08-20",
+        "position": "Sales Director"
+      }
+    },
+    {
+      "key": "user456",
+      "value": {
+        "name": "Jane Smith",
+        "department": "sales",
+        "hireDate": "2023-05-15",
+        "position": "Sales Manager"
+      }
+    },
+    {
+      "key": "user789",
+      "value": {
+        "name": "Bob Johnson",
+        "department": "sales",
+        "hireDate": "2022-11-03",
+        "position": "Sales Representative"
+      }
+    }
+  ]
+}
+```
+
+**注意**:
+- 複数のソートフィールドを指定する場合、最初のフィールドで同じ値を持つエントリは、次のフィールドでソートされます。
+- 各ソートフィールドに対して個別にソート順序（昇順/降順）を指定できます。
+- ソートフィールドが存在しないエントリは、ソート結果の最後に配置されます。
 
 #### インデックス削除
 

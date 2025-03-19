@@ -12,11 +12,35 @@ type AuthConfig struct {
 	Enabled  bool
 }
 
+// IndexType represents the type of an index
+type IndexType int
+
+const (
+	BasicIndexType IndexType = iota
+	SortableIndexType
+)
+
+// Index is an interface that all index types must implement
+type Index interface {
+	Build(set *Set) error
+	AddEntry(key string, value []byte) error
+	RemoveEntry(key string, value []byte) error
+	UpdateEntry(key string, oldValue, newValue []byte) error
+	Query(value string) ([]string, error)
+	GetAllValues() []string
+	Size() int
+	Clear()
+	GetName() string
+	GetSetName() string
+	GetField() string
+	GetType() IndexType
+}
+
 // Database represents a FuckBase database
 type Database struct {
 	Name    string
 	Sets    map[string]*Set
-	Indexes map[string]*Index
+	Indexes map[string]Index
 	Auth    *AuthConfig
 	mu      sync.RWMutex
 }
@@ -26,7 +50,7 @@ func NewDatabase(name string, auth *AuthConfig) *Database {
 	return &Database{
 		Name:    name,
 		Sets:    make(map[string]*Set),
-		Indexes: make(map[string]*Index),
+		Indexes: make(map[string]Index),
 		Auth:    auth,
 	}
 }
@@ -84,8 +108,8 @@ func (db *Database) ListSets() []string {
 	return sets
 }
 
-// CreateIndex creates a new index for a set
-func (db *Database) CreateIndex(name string, setName string, field string) (*Index, error) {
+// CreateIndex creates a new basic index for a set
+func (db *Database) CreateIndex(name string, setName string, field string) (*BasicIndex, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -109,8 +133,33 @@ func (db *Database) CreateIndex(name string, setName string, field string) (*Ind
 	return index, nil
 }
 
+// CreateSortableIndex creates a new sortable index for a set
+func (db *Database) CreateSortableIndex(name string, setName string, primaryField string, sortFields []string) (*SortableIndex, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if _, exists := db.Indexes[name]; exists {
+		return nil, fmt.Errorf("index already exists: %s", name)
+	}
+
+	set, exists := db.Sets[setName]
+	if !exists {
+		return nil, fmt.Errorf("set not found: %s", setName)
+	}
+
+	index := NewSortableIndex(name, setName, primaryField, sortFields)
+	
+	// Build the index by scanning all entries in the set
+	if err := index.Build(set); err != nil {
+		return nil, fmt.Errorf("failed to build sortable index: %w", err)
+	}
+
+	db.Indexes[name] = index
+	return index, nil
+}
+
 // GetIndex returns an index by name
-func (db *Database) GetIndex(name string) (*Index, error) {
+func (db *Database) GetIndex(name string) (Index, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
@@ -122,8 +171,8 @@ func (db *Database) GetIndex(name string) (*Index, error) {
 	return index, nil
 }
 
-// DeleteIndex deletes an index from the database
-func (db *Database) DeleteIndex(name string) error {
+// DropIndex deletes an index from the database
+func (db *Database) DropIndex(name string) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -132,6 +181,40 @@ func (db *Database) DeleteIndex(name string) error {
 	}
 
 	delete(db.Indexes, name)
+	return nil
+}
+
+// RebuildIndex rebuilds an existing index
+func (db *Database) RebuildIndex(name string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	index, exists := db.Indexes[name]
+	if !exists {
+		return fmt.Errorf("index not found: %s", name)
+	}
+
+	// Get the set for this index
+	var setName string
+	switch idx := index.(type) {
+	case *BasicIndex:
+		setName = idx.SetName
+	case *SortableIndex:
+		setName = idx.SetName
+	default:
+		return fmt.Errorf("unknown index type for index: %s", name)
+	}
+
+	set, exists := db.Sets[setName]
+	if !exists {
+		return fmt.Errorf("set not found for index: %s", setName)
+	}
+
+	// Rebuild the index
+	if err := index.Build(set); err != nil {
+		return fmt.Errorf("failed to rebuild index: %w", err)
+	}
+
 	return nil
 }
 
@@ -155,4 +238,112 @@ func (db *Database) Authenticate(username, password string) bool {
 	}
 
 	return db.Auth.Username == username && db.Auth.Password == password
+}
+
+// Put adds or updates a value in a set and updates all related indexes
+func (db *Database) Put(setName string, key string, value interface{}) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	// Get the set
+	set, exists := db.Sets[setName]
+	if !exists {
+		return fmt.Errorf("set not found: %s", setName)
+	}
+
+	// Get the old value if it exists
+	var oldValue []byte
+	if set.Has(key) {
+		var err error
+		oldValue, err = set.GetRaw(key)
+		if err != nil {
+			return fmt.Errorf("failed to get old value: %w", err)
+		}
+	}
+
+	// Add the new value to the set
+	if err := set.Put(key, value); err != nil {
+		return fmt.Errorf("failed to put value: %w", err)
+	}
+
+	// Get the new value
+	newValue, err := set.GetRaw(key)
+	if err != nil {
+		return fmt.Errorf("failed to get new value: %w", err)
+	}
+
+	// Update all indexes that reference this set
+	for _, index := range db.Indexes {
+		var indexSetName string
+		switch idx := index.(type) {
+		case *BasicIndex:
+			indexSetName = idx.SetName
+		case *SortableIndex:
+			indexSetName = idx.SetName
+		default:
+			continue // Skip unknown index types
+		}
+
+		// Only update indexes for this set
+		if indexSetName == setName {
+			if oldValue == nil {
+				// This is a new entry
+				if err := index.AddEntry(key, newValue); err != nil {
+					return fmt.Errorf("failed to add entry to index: %w", err)
+				}
+			} else {
+				// This is an update
+				if err := index.UpdateEntry(key, oldValue, newValue); err != nil {
+					return fmt.Errorf("failed to update entry in index: %w", err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// Delete removes a value from a set and updates all related indexes
+func (db *Database) Delete(setName string, key string) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	// Get the set
+	set, exists := db.Sets[setName]
+	if !exists {
+		return fmt.Errorf("set not found: %s", setName)
+	}
+
+	// Get the value before deleting
+	oldValue, err := set.GetRaw(key)
+	if err != nil {
+		return fmt.Errorf("failed to get value: %w", err)
+	}
+
+	// Delete the value from the set
+	if err := set.Delete(key); err != nil {
+		return fmt.Errorf("failed to delete value: %w", err)
+	}
+
+	// Update all indexes that reference this set
+	for _, index := range db.Indexes {
+		var indexSetName string
+		switch idx := index.(type) {
+		case *BasicIndex:
+			indexSetName = idx.SetName
+		case *SortableIndex:
+			indexSetName = idx.SetName
+		default:
+			continue // Skip unknown index types
+		}
+
+		// Only update indexes for this set
+		if indexSetName == setName {
+			if err := index.RemoveEntry(key, oldValue); err != nil {
+				return fmt.Errorf("failed to remove entry from index: %w", err)
+			}
+		}
+	}
+
+	return nil
 }

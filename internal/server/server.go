@@ -126,8 +126,11 @@ func (s *Server) registerEndpoints(router *http.ServeMux) {
 
 	// Index operations
 	router.HandleFunc("/index/create", s.handleIndexCreate)
+	router.HandleFunc("/index/create/sortable", s.handleSortableIndexCreate)
 	router.HandleFunc("/index/drop", s.handleIndexDrop)
 	router.HandleFunc("/index/query", s.handleIndexQuery)
+	router.HandleFunc("/index/query/sorted", s.handleSortedIndexQuery)
+	router.HandleFunc("/index/query/multi-sorted", s.handleMultiSortedIndexQuery)
 
 	// Server info
 	router.HandleFunc("/server/info", s.handleServerInfo)

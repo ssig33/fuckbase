@@ -130,12 +130,17 @@ func TestDatabaseIndex(t *testing.T) {
 	}
 
 	// Test GetIndex
-	index, err = db.GetIndex("name_index")
+	indexInterface, err := db.GetIndex("name_index")
 	if err != nil {
 		t.Errorf("Failed to get index: %v", err)
 	}
-	if index.Name != "name_index" {
-		t.Errorf("Expected index name to be 'name_index', got '%s'", index.Name)
+	
+	// Type assertion to convert interface to concrete type
+	basicIndex, ok := indexInterface.(*BasicIndex)
+	if !ok {
+		t.Errorf("Expected index to be of type *BasicIndex")
+	} else if basicIndex.Name != "name_index" {
+		t.Errorf("Expected index name to be 'name_index', got '%s'", basicIndex.Name)
 	}
 
 	// Test getting a nonexistent index
@@ -153,19 +158,19 @@ func TestDatabaseIndex(t *testing.T) {
 		t.Errorf("Expected index name to be 'name_index', got '%s'", indexes[0])
 	}
 
-	// Test DeleteIndex
-	err = db.DeleteIndex("name_index")
+	// Test DropIndex
+	err = db.DropIndex("name_index")
 	if err != nil {
-		t.Errorf("Failed to delete index: %v", err)
+		t.Errorf("Failed to drop index: %v", err)
 	}
 	indexes = db.ListIndexes()
 	if len(indexes) != 0 {
 		t.Errorf("Expected 0 indexes after deletion, got %d", len(indexes))
 	}
 
-	// Test deleting a nonexistent index
-	err = db.DeleteIndex("nonexistent")
+	// Test dropping a nonexistent index
+	err = db.DropIndex("nonexistent")
 	if err == nil {
-		t.Errorf("Expected error when deleting a nonexistent index")
+		t.Errorf("Expected error when dropping a nonexistent index")
 	}
 }
