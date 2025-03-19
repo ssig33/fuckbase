@@ -4,8 +4,8 @@ set -e
 
 echo "Starting FuckBase server and running client tests..."
 
-# Start FuckBase server using Docker Compose
-docker-compose up -d
+# Rebuild and start FuckBase server using Docker Compose
+docker-compose up -d --build
 
 # Wait for the server to start
 echo "Waiting for FuckBase server to start..."

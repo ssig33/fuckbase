@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Start the containers if they're not already running
-echo "Starting containers..."
-docker compose up -d
+# Rebuild and start the containers
+echo "Rebuilding and starting containers..."
+docker compose up -d --build
 
 # Wait for the server to be ready
 echo "Waiting for server to be ready..."
