@@ -62,21 +62,21 @@ FuckBaseでは、主に以下の同期プリミティブを使用しています
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Manager as データベースマネージャ
-    participant DB as データベース
+    participant Client as "クライアント"
+    participant Manager as "データベースマネージャ"
+    participant DB as "データベース"
     
     Client->>Manager: GetDatabase("mydb")
     Manager->>Manager: mu.RLock()
-    Manager->>DB: データベース取得
+    Manager->>DB: "データベース取得"
     Manager->>Manager: mu.RUnlock()
-    Manager-->>Client: データベース返却
+    Manager-->>Client: "データベース返却"
     
     Client->>Manager: CreateDatabase("newdb")
     Manager->>Manager: mu.Lock()
-    Manager->>Manager: 新しいデータベース作成
+    Manager->>Manager: "新しいデータベース作成"
     Manager->>Manager: mu.Unlock()
-    Manager-->>Client: 新しいデータベース返却
+    Manager-->>Client: "新しいデータベース返却"
 ```
 
 ### 2. データベースでの同期
@@ -89,21 +89,21 @@ Setは、キーバリューペアを保存するコンポーネントです。�
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
+    participant Client as "クライアント"
     participant Set as Set
-    participant Data as データストア
+    participant Data as "データストア"
     
     Client->>Set: Get("key1")
     Set->>Set: mu.RLock()
-    Set->>Data: データ取得
+    Set->>Data: "データ取得"
     Set->>Set: mu.RUnlock()
-    Set-->>Client: データ返却
+    Set-->>Client: "データ返却"
     
     Client->>Set: Put("key2", value)
     Set->>Set: mu.Lock()
-    Set->>Data: データ保存
+    Set->>Data: "データ保存"
     Set->>Set: mu.Unlock()
-    Set-->>Client: 成功返却
+    Set-->>Client: "成功返却"
 ```
 
 ### 4. インデックスでの同期

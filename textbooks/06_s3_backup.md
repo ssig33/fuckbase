@@ -13,10 +13,10 @@ S3バックアップ機能は、FuckBaseのデータを外部のS3互換スト�
 
 ```mermaid
 graph TD
-    A("FuckBase") -->|バックアップ| B("S3コネクタ")
-    B -->|アップロード| C("S3互換ストレージ")
-    C -->|ダウンロード| B
-    B -->|復元| A
+    A("FuckBase") -->|"バックアップ"| B("S3コネクタ")
+    B -->|"アップロード"| C("S3互換ストレージ")
+    C -->|"ダウンロード"| B
+    B -->|"復元"| A
 ```
 
 S3バックアップ機能の実装は [../internal/s3/backup.go](../internal/s3/backup.go) と [../internal/s3/client.go](../internal/s3/client.go) で確認できます。
@@ -113,36 +113,36 @@ classDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Handler as APIハンドラ
-    participant BM as バックアップマネージャ
-    participant DB as データベース
-    participant S3 as S3クライアント
+    participant Client as "クライアント"
+    participant Handler as "APIハンドラ"
+    participant BM as "バックアップマネージャ"
+    participant DB as "データベース"
+    participant S3 as "S3クライアント"
     
-    Client->>Handler: バックアップリクエスト
+    Client->>Handler: "バックアップリクエスト"
     Handler->>BM: BackupDatabase(dbName)
     BM->>DB: GetDatabase(dbName)
-    DB-->>BM: データベースオブジェクト
+    DB-->>BM: "データベースオブジェクト"
     
     BM->>BM: createDatabaseBackup(db)
     
-    loop 各Set
+    loop "各Set"
         BM->>DB: GetSet(setName)
-        DB-->>BM: Setオブジェクト
-        BM->>BM: バックアップデータに追加
+        DB-->>BM: "Setオブジェクト"
+        BM->>BM: "バックアップデータに追加"
     end
     
-    loop 各インデックス
+    loop "各インデックス"
         BM->>DB: GetIndex(indexName)
-        DB-->>BM: インデックスオブジェクト
-        BM->>BM: バックアップデータに追加
+        DB-->>BM: "インデックスオブジェクト"
+        BM->>BM: "バックアップデータに追加"
     end
     
-    BM->>BM: JSON変換
+    BM->>BM: "JSON変換"
     BM->>S3: UploadFile(objectName, data)
-    S3-->>BM: アップロード結果
-    BM-->>Handler: バックアップ結果
-    Handler-->>Client: レスポンス
+    S3-->>BM: "アップロード結果"
+    BM-->>Handler: "バックアップ結果"
+    Handler-->>Client: "レスポンス"
 ```
 
 ## 復元処理フロー
@@ -157,41 +157,41 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Handler as APIハンドラ
-    participant BM as バックアップマネージャ
-    participant DB as データベースマネージャ
-    participant S3 as S3クライアント
+    participant Client as "クライアント"
+    participant Handler as "APIハンドラ"
+    participant BM as "バックアップマネージャ"
+    participant DB as "データベースマネージャ"
+    participant S3 as "S3クライアント"
     
-    Client->>Handler: 復元リクエスト
+    Client->>Handler: "復元リクエスト"
     Handler->>BM: RestoreDatabase(objectName)
     BM->>S3: DownloadFile(objectName)
-    S3-->>BM: バックアップデータ
+    S3-->>BM: "バックアップデータ"
     
-    BM->>BM: JSONパース
+    BM->>BM: "JSONパース"
     
-    alt データベースが存在する
+    alt "データベースが存在する"
         BM->>DB: DeleteDatabase(backup.Name)
     end
     
     BM->>DB: CreateDatabase(backup.Name, backup.Auth)
-    DB-->>BM: 新しいデータベース
+    DB-->>BM: "新しいデータベース"
     
-    loop 各Set
+    loop "各Set"
         BM->>DB: CreateSet(setBackup.Name)
-        DB-->>BM: 新しいSet
+        DB-->>BM: "新しいSet"
         
-        loop 各キーバリューペア
+        loop "各キーバリューペア"
             BM->>DB: Put(key, value)
         end
     end
     
-    loop 各インデックス
+    loop "各インデックス"
         BM->>DB: CreateIndex(indexBackup.Name, indexBackup.SetName, indexBackup.Field)
     end
     
-    BM-->>Handler: 復元結果
-    Handler-->>Client: レスポンス
+    BM-->>Handler: "復元結果"
+    Handler-->>Client: "レスポンス"
 ```
 
 ## 自動バックアップ
@@ -201,8 +201,8 @@ FuckBaseは、定期的な自動バックアップをサポートしています
 ```mermaid
 graph TD
     A("サーバー起動") --> B{"自動バックアップが有効?"}
-    B -->|はい| C("バックアップスケジューラ開始")
-    B -->|いいえ| D("スキップ")
+    B -->|"はい"| C("バックアップスケジューラ開始")
+    B -->|"いいえ"| D("スキップ")
     
     C --> E("バックアップ間隔待機")
     E --> F("すべてのデータベースをバックアップ")

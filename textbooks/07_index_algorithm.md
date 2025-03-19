@@ -55,16 +55,16 @@ Values = {
 
 ```mermaid
 sequenceDiagram
-    participant Index as インデックス
+    participant Index as "インデックス"
     participant Set as Set
     Index->>Index: Values = {}（空のマップを初期化）
     Index->>Set: ForEach(callback)
-    loop 各エントリ(key, value)
+    loop "各エントリ(key, value)"
         Set-->>Index: callback(key, value)
         Index->>Index: fieldValue = extractFieldValue(value)
-        alt フィールドが存在する
+        alt "フィールドが存在する"
             Index->>Index: Values[fieldValue] = append(Values[fieldValue], key)
-        else フィールドが存在しない
+        else "フィールドが存在しない"
             Index->>Index: スキップ
         end
     end
@@ -82,17 +82,17 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A("MessagePackデータ") -->|デコード| B("マップ")
-    B -->|フィールド検索| C{"フィールドが存在?"}
-    C -->|はい| D("値の型チェック")
-    C -->|いいえ| E("エラー")
-    D -->|文字列| F("そのまま使用")
-    D -->|数値| G("文字列に変換")
-    D -->|ブール値| H("文字列に変換")
-    D -->|その他| I("エラー")
-    F -->|結果| J("フィールド値")
-    G -->|結果| J
-    H -->|結果| J
+    A("MessagePackデータ") -->|"デコード"| B("マップ")
+    B -->|"フィールド検索"| C{"フィールドが存在?"}
+    C -->|"はい"| D("値の型チェック")
+    C -->|"いいえ"| E("エラー")
+    D -->|"文字列"| F("そのまま使用")
+    D -->|"数値"| G("文字列に変換")
+    D -->|"ブール値"| H("文字列に変換")
+    D -->|"その他"| I("エラー")
+    F -->|"結果"| J("フィールド値")
+    G -->|"結果"| J
+    H -->|"結果"| J
 ```
 
 このアルゴリズムの実装は [../internal/database/index.go](../internal/database/index.go) の`extractFieldValue`メソッドで確認できます。
@@ -103,10 +103,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A("検索開始") -->|値指定| B{"値が存在?"}
-    B -->|はい| C("キーのリストをコピー")
-    B -->|いいえ| D("空のリストを返す")
-    C -->|結果| J("キーのリスト")
+    A("検索開始") -->|"値指定"| B{"値が存在?"}
+    B -->|"はい"| C("キーのリストをコピー")
+    B -->|"いいえ"| D("空のリストを返す")
+    C -->|"結果"| J("キーのリスト")
 ```
 
 このアルゴリズムの実装は [../internal/database/index.go](../internal/database/index.go) の`Query`メソッドで確認できます。
@@ -120,31 +120,31 @@ FuckBaseでは、データの変更（追加、更新、削除）に応じてイ
 
 ```mermaid
 graph TD
-    A("エントリ追加") -->|フィールド値抽出| B{"フィールドが存在?"}
-    B -->|はい| C("Values[fieldValue]にキーを追加")
-    B -->|いいえ| D("何もしない")
+    A("エントリ追加") -->|"フィールド値抽出"| B{"フィールドが存在?"}
+    B -->|"はい"| C("Values[fieldValue]にキーを追加")
+    B -->|"いいえ"| D("何もしない")
 ```
 
 ### エントリの削除
 
 ```mermaid
 graph TD
-    A("エントリ削除") -->|フィールド値抽出| B{"フィールドが存在?"}
-    B -->|はい| C("Values[fieldValue]からキーを削除")
-    B -->|いいえ| D("何もしない")
-    C -->|リストが空?| E{"空?"}
-    E -->|はい| F("Values[fieldValue]を削除")
-    E -->|いいえ| G("更新されたリストを保持")
+    A("エントリ削除") -->|"フィールド値抽出"| B{"フィールドが存在?"}
+    B -->|"はい"| C("Values[fieldValue]からキーを削除")
+    B -->|"いいえ"| D("何もしない")
+    C -->|"リストが空?"| E{"空?"}
+    E -->|"はい"| F("Values[fieldValue]を削除")
+    E -->|"いいえ"| G("更新されたリストを保持")
 ```
 
 ### エントリの更新
 
 ```mermaid
 graph TD
-    A("エントリ更新") -->|古い値からフィールド値抽出| B("古いフィールド値")
-    A -->|新しい値からフィールド値抽出| C("新しいフィールド値")
-    B -->|削除処理| D("Values[oldFieldValue]からキーを削除")
-    C -->|追加処理| E("Values[newFieldValue]にキーを追加")
+    A("エントリ更新") -->|"古い値からフィールド値抽出"| B("古いフィールド値")
+    A -->|"新しい値からフィールド値抽出"| C("新しいフィールド値")
+    B -->|"削除処理"| D("Values[oldFieldValue]からキーを削除")
+    C -->|"追加処理"| E("Values[newFieldValue]にキーを追加")
 ```
 
 これらのアルゴリズムの実装は [../internal/database/index.go](../internal/database/index.go) の`AddEntry`、`RemoveEntry`、`UpdateEntry`メソッドで確認できます。
@@ -219,25 +219,25 @@ SortValues = {
 
 ```mermaid
 sequenceDiagram
-    participant Index as ソート可能インデックス
+    participant Index as "ソート可能インデックス"
     participant Set as Set
     Index->>Index: Values = {}（空のマップを初期化）
     Index->>Index: SortValues = {}（空のマップを初期化）
     Index->>Set: ForEach(callback)
-    loop 各エントリ(key, value)
+    loop "各エントリ(key, value)"
         Set-->>Index: callback(key, value)
         Index->>Index: primaryValue = extractFieldValue(value, PrimaryField)
-        alt プライマリフィールドが存在する
+        alt "プライマリフィールドが存在する"
             Index->>Index: Values[primaryValue] = append(Values[primaryValue], key)
             Index->>Index: sortValues = {}（空のマップを初期化）
-            loop 各ソートフィールド
+            loop "各ソートフィールド"
                 Index->>Index: sortValue = extractFieldValue(value, SortField)
-                alt ソートフィールドが存在する
+                alt "ソートフィールドが存在する"
                     Index->>Index: sortValues[SortField] = sortValue
                 end
             end
             Index->>Index: SortValues[key] = sortValues
-        else プライマリフィールドが存在しない
+        else "プライマリフィールドが存在しない"
             Index->>Index: スキップ
         end
     end
@@ -249,14 +249,14 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A("検索開始") -->|プライマリ値指定| B{"値が存在?"}
-    B -->|はい| C("キーのリストを取得")
-    B -->|いいえ| D("空のリストを返す")
-    C -->|ソートフィールド指定| E("キーをソート")
-    E -->|ソート順序指定| F("昇順/降順でソート")
-    F -->|ページング指定| H("オフセット/リミット適用")
-    H -->|結果| G("ソートされたキーのリスト")
-    D -->|結果| G
+    A("検索開始") -->|"プライマリ値指定"| B{"値が存在?"}
+    B -->|"はい"| C("キーのリストを取得")
+    B -->|"いいえ"| D("空のリストを返す")
+    C -->|"ソートフィールド指定"| E("キーをソート")
+    E -->|"ソート順序指定"| F("昇順/降順でソート")
+    F -->|"ページング指定"| H("オフセット/リミット適用")
+    H -->|"結果"| G("ソートされたキーのリスト")
+    D -->|"結果"| G
 ```
 
 ソートアルゴリズムは、指定されたソートフィールドの値に基づいてキーをソートします。複数のソートフィールドが指定された場合は、最初のフィールドで同値の場合に次のフィールドでソートするという多段ソートを行います。

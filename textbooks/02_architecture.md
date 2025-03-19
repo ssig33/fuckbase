@@ -30,16 +30,16 @@ HTTPサーバーは、FuckBaseの外部インターフェースとなるコン�
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Server as HTTPサーバー
-    participant Router as ルーター
-    participant Handler as ハンドラ
+    participant Client as "クライアント"
+    participant Server as "HTTPサーバー"
+    participant Router as "ルーター"
+    participant Handler as "ハンドラ"
     
-    Client->>Server: HTTPリクエスト
-    Server->>Router: リクエスト転送
-    Router->>Handler: 適切なハンドラにルーティング
-    Handler->>Handler: リクエスト処理
-    Handler-->>Client: HTTPレスポンス
+    Client->>Server: "HTTPリクエスト"
+    Server->>Router: "リクエスト転送"
+    Router->>Handler: "適切なハンドラにルーティング"
+    Handler->>Handler: "リクエスト処理"
+    Handler-->>Client: "HTTPレスポンス"
 ```
 
 HTTPサーバーの実装は [../internal/server/server.go](../internal/server/server.go) で確認できます。
@@ -169,80 +169,80 @@ FuckBaseにおけるデータフローを理解することは、システム全
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Server as HTTPサーバー
-    participant DBManager as データベースマネージャ
-    participant DB as データベース
+    participant Client as "クライアント"
+    participant Server as "HTTPサーバー"
+    participant DBManager as "データベースマネージャ"
+    participant DB as "データベース"
     participant Set as Set
-    participant Index as インデックス
+    participant Index as "インデックス"
     
-    Client->>Server: PUT リクエスト
+    Client->>Server: "PUT リクエスト"
     Server->>DBManager: GetDatabase(dbName)
-    DBManager-->>Server: データベース
+    DBManager-->>Server: "データベース"
     Server->>DB: GetSet(setName)
     DB-->>Server: Set
     Server->>Set: Put(key, value)
-    Set->>Set: MessagePackエンコード
-    Set-->>Server: 成功
+    Set->>Set: "MessagePackエンコード"
+    Set-->>Server: "成功"
     
-    alt インデックスが存在する場合
+    alt "インデックスが存在する場合"
         Server->>DB: GetIndex(indexName)
-        DB-->>Server: インデックス
+        DB-->>Server: "インデックス"
         Server->>Set: GetRaw(key)
-        Set-->>Server: エンコードされた値
+        Set-->>Server: "エンコードされた値"
         Server->>Index: AddEntry(key, rawValue)
-        Index-->>Server: 成功
+        Index-->>Server: "成功"
     end
     
-    Server-->>Client: 成功レスポンス
+    Server-->>Client: "成功レスポンス"
 ```
 
 ### データ取得フロー
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Server as HTTPサーバー
-    participant DBManager as データベースマネージャ
-    participant DB as データベース
+    participant Client as "クライアント"
+    participant Server as "HTTPサーバー"
+    participant DBManager as "データベースマネージャ"
+    participant DB as "データベース"
     participant Set as Set
     
-    Client->>Server: GET リクエスト
+    Client->>Server: "GET リクエスト"
     Server->>DBManager: GetDatabase(dbName)
-    DBManager-->>Server: データベース
+    DBManager-->>Server: "データベース"
     Server->>DB: GetSet(setName)
     DB-->>Server: Set
     Server->>Set: Get(key, &value)
-    Set->>Set: MessagePackデコード
-    Set-->>Server: デコードされた値
-    Server-->>Client: 値を含むレスポンス
+    Set->>Set: "MessagePackデコード"
+    Set-->>Server: "デコードされた値"
+    Server-->>Client: "値を含むレスポンス"
 ```
 
 ### インデックスクエリフロー
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
-    participant Server as HTTPサーバー
-    participant DBManager as データベースマネージャ
-    participant DB as データベース
-    participant Index as インデックス
+    participant Client as "クライアント"
+    participant Server as "HTTPサーバー"
+    participant DBManager as "データベースマネージャ"
+    participant DB as "データベース"
+    participant Index as "インデックス"
     participant Set as Set
     
-    Client->>Server: QUERY リクエスト
+    Client->>Server: "QUERY リクエスト"
     Server->>DBManager: GetDatabase(dbName)
-    DBManager-->>Server: データベース
+    DBManager-->>Server: "データベース"
     Server->>DB: GetIndex(indexName)
-    DB-->>Server: インデックス
+    DB-->>Server: "インデックス"
     Server->>Index: Query(value, sortOrder, limit, offset)
-    Index-->>Server: キーのリスト
+    Index-->>Server: "キーのリスト"
     
-    loop 各キー
+    loop "各キー"
         Server->>Set: Get(key, &value)
-        Set-->>Server: 値
+        Set-->>Server: "値"
     end
     
-    Server-->>Client: 結果を含むレスポンス
+    Server-->>Client: "結果を含むレスポンス"
 ```
 
 ## コンポーネント間の相互作用

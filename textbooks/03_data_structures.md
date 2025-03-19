@@ -41,10 +41,10 @@ classDiagram
         +Enabled bool
     }
     
-    Manager --> Database : 管理
-    Database --> Set : 管理
-    Database --> Index : 管理
-    Database --> AuthConfig : 使用
+    Manager --> Database : "管理"
+    Database --> Set : "管理"
+    Database --> Index : "管理"
+    Database --> AuthConfig : "使用"
 ```
 
 各データ構造の詳細な実装は以下のファイルで確認できます：
@@ -66,21 +66,21 @@ Setは、FuckBaseの最も基本的なデータ構造で、キーバリューペ
 
 ```mermaid
 sequenceDiagram
-    participant Client as クライアント
+    participant Client as "クライアント"
     participant Set as Set
     participant MsgPack as MessagePack
     
     Client->>Set: Put(key, value)
     Set->>MsgPack: Marshal(value)
-    MsgPack-->>Set: エンコードされたデータ
+    MsgPack-->>Set: "エンコードされたデータ"
     Set->>Set: Data[key] = encodedData
-    Set-->>Client: 成功
+    Set-->>Client: "成功"
     
     Client->>Set: Get(key, &dest)
     Set->>Set: encodedData = Data[key]
     Set->>MsgPack: Unmarshal(encodedData, &dest)
-    MsgPack-->>Set: デコード完了
-    Set-->>Client: 成功
+    MsgPack-->>Set: "デコード完了"
+    Set-->>Client: "成功"
 ```
 
 ### 主要な操作
@@ -109,13 +109,13 @@ Indexは、Setのデータに対する二次インデックスを提供するデ
 
 ```mermaid
 graph TD
-    A("Set") -->|インデックス作成| B("Index")
-    B -->|フィールド値抽出| C{"フィールドが存在?"}
-    C -->|はい| D("Values[fieldValue]にキーを追加")
-    C -->|いいえ| E("スキップ")
+    A("Set") -->|"インデックス作成"| B("Index")
+    B -->|"フィールド値抽出"| C{"フィールドが存在?"}
+    C -->|"はい"| D("Values[fieldValue]にキーを追加")
+    C -->|"いいえ"| E("スキップ")
     
-    F("クエリ") -->|値指定| G("Values[value]からキーリスト取得")
-    G -->|結果| I("結果を返す")
+    F("クエリ") -->|"値指定"| G("Values[value]からキーリスト取得")
+    G -->|"結果"| I("結果を返す")
 ```
 
 ### 主要な操作
