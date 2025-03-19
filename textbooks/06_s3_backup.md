@@ -274,7 +274,7 @@ FuckBaseは、バックアップと復元のための以下のAPIエンドポイ
 **リクエスト例**:
 ```json
 {
-  "object_name": "backups/mydb/2023-01-01T12:00:00Z.json"
+  "backup_name": "backups/mydb/2023-01-01T12:00:00Z.json"
 }
 ```
 

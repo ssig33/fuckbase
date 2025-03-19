@@ -247,8 +247,7 @@ Setのフィールドにインデックスを作成するエンドポイント�
   "database": "mydb",
   "set": "users",
   "index": "email_index",
-  "value": "john@example.com",
-  "sort": "asc"
+  "value": "john@example.com"
 }
 ```
 
