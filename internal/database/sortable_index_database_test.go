@@ -184,7 +184,16 @@ func TestDatabaseSortableIndexRebuild(t *testing.T) {
 	}
 
 	// Clear the set and add new data
-	// Note: We're rebuilding the index after adding new data, so we don't need to clear the set
+	// Delete the existing products
+	err = db.Delete("test_set", "prod1")
+	if err != nil {
+		t.Fatalf("Failed to delete product: %v", err)
+	}
+	
+	err = db.Delete("test_set", "prod2")
+	if err != nil {
+		t.Fatalf("Failed to delete product: %v", err)
+	}
 	
 	err = db.Put("test_set", "prod3", Product{Name: "Tablet", Category: "Electronics", Price: 500.00})
 	if err != nil {
